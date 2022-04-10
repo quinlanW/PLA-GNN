@@ -1,7 +1,7 @@
-import dgl.data
 from model import *
 from train import *
 from utils import *
+from torch.nn import MultiLabelSoftMarginLoss
 
 
 ppi = load_npz('../data/generate_materials/PPI_normal.npz')
@@ -19,6 +19,5 @@ device = 'cpu'
 g = create_graph(ppi, ecc, gcn, loc, uniprot)
 g = g.to(device)
 criterion = MultiLabelSoftMarginLoss()
-model = GCN(g.ndata['feat'].shape[1], 500, 100, 12).to(device)
-for alp in [0.1, 0.2, 0.3]:
-    train(g, model, criterion, lr=0.001, alpha=alp, device=device)
+for alp in [0.1]:  # , 0.2, 0.3]:
+    train(g, criterion, lr=0.001, alpha=alp, device=device)

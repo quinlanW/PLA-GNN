@@ -20,15 +20,15 @@ def create_graph(ppi, ecc, gcn, loc, uniprot):
     return g
 
 
-if __name__ == "__main__":
-    PPI = load_npz('../data/generate_materials/PPI_normal.npz')
-    GCN = load_npz('../data/generate_materials/GCN_normal.npz')
-    ECC = load_npz('../data/generate_materials/ECC_normal.npz')
-    LOC = load_npz('../data/generate_materials/loc_matrix.npz')
-    with open('../data/generate_materials/protein_ppi.json', 'r') as f:
-        uniprot = json.load(f)
-    g = create_graph(PPI, ECC, GCN, LOC, uniprot)
-    print(g)
+# if __name__ == "__main__":
+#     PPI = load_npz('../data/generate_materials/PPI_normal.npz')
+#     GCN = load_npz('../data/generate_materials/GCN_normal.npz')
+#     ECC = load_npz('../data/generate_materials/ECC_normal.npz')
+#     LOC = load_npz('../data/generate_materials/loc_matrix.npz')
+#     with open('../data/generate_materials/protein_ppi.json', 'r') as f:
+#         uniprot = json.load(f)
+#     g = create_graph(PPI, ECC, GCN, LOC, uniprot)
+#     print(g)
 
     # add virtual protein
     # PPI = load_npz('../data/generate_materials/vir_PPI_normal.npz')

@@ -1,8 +1,9 @@
 import json
 import torch
 import datetime
-import torch.nn.functional as F
-from torch.nn import MultiLabelSoftMarginLoss
+import matplotlib.pyplot as plt
+import numpy as np
+from model import *
 from sklearn.model_selection import KFold
 
 
@@ -37,7 +38,7 @@ def proformances_record(loc_true, loc_pred, device):
         cov = cov + and_set / real
         acc = acc + and_set / or_set
         atr = atr + correct
-        afr = (or_set - and_set) / len(loc_true[i])
+        afr = afr + (or_set - and_set) / len(loc_true[i])
 
     aim = float(aim / len(loc_true))
     cov = float(cov / len(loc_true))
@@ -48,32 +49,22 @@ def proformances_record(loc_true, loc_pred, device):
     return aim, cov, acc, atr, afr
 
 
-def train(g, model, criterion, lr, alpha, device):
-    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
-    best_train_aim = 0
-    best_train_cov = 0
-    best_train_acc = 0
-    best_train_atr = 0
-    best_train_afr = 0
-
-    best_val_aim = 0
-    best_val_cov = 0
-    best_val_acc = 0
-    best_val_atr = 0
-    best_val_afr = 0
-
+def train(g, criterion, lr, alpha, device):
     features = g.ndata['feat']
     labels = g.ndata['loc'].long()
 
     with open('../data/generate_materials/label_with_loc_list.json') as f:
         label = json.load(f)
-    kfold = KFold(n_splits=5, random_state=None, shuffle=True)
+    kfold = KFold(n_splits=5, random_state=42, shuffle=True)
+
     fold_flag = 1
-    with open('../data/log/performance_log', 'a') as f:
-        line = '---------------  alpha: {:.3f}, learning rate: {:.5f}  ---------------\n\r'.format(alpha, lr)
-        f.write(line)
+    path = '../data/log/'
 
     for train_idx, val_idx in kfold.split(label):
+        model = GCN(g.ndata['feat'].shape[1], 500, 100, 12).to(device)
+        optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+
+        # index conversion
         train_index = []
         val_index = []
         for idx in train_idx:
@@ -81,69 +72,168 @@ def train(g, model, criterion, lr, alpha, device):
         for idx in val_idx:
             val_index.append(label[idx])
 
+        # evaluation indicators
+        train_aim_list = []
+        train_cov_list = []
+        train_acc_list = []
+        train_atr_list = []
+        train_afr_list = []
+
+        val_aim_list = []
+        val_cov_list = []
+        val_acc_list = []
+        val_atr_list = []
+        val_afr_list = []
+
+        epoch = []
+        train_loss_list = []
+        val_loss_list = []
+
         for e in range(500):
             # Forward
             logits = model(g, features)  # torch.Size([5000, 12]) <class 'torch.Tensor'>
-
 
             # Compute prediction
             pred = protein_loc_correction(logits, alpha=alpha)
 
             # Compute loss
             # Note that you should only compute the losses of the nodes in the training set.
-            loss = criterion(logits[train_index], labels[train_index])
-            # loss = criterion(pred[train_idx], labels[train_idx])  # why this wrong ?
+            train_loss = criterion(logits[train_index], labels[train_index])
+            val_loss = criterion(logits[val_index], labels[val_index])
 
             # Compute accuracy on training/validation
             train_aim, train_cov, train_acc, train_atr, train_afr = proformances_record(labels[train_index], pred[train_index], device)
             val_aim, val_cov, val_acc, val_atr, val_afr = proformances_record(labels[val_index], pred[val_index], device)
 
-            # Save the best training accuracy and the corresponding validation accuracy.
-            # train
-            if best_train_aim < train_aim:
-                best_train_aim = train_aim
-            if best_train_cov < train_cov:
-                best_train_cov = train_cov
-            if best_train_acc < train_acc:
-                best_train_acc = train_acc
-            if best_train_atr < train_atr:
-                best_train_atr = train_atr
-            if best_train_afr < train_afr:
-                best_train_afr = train_afr
-            # val
-            if best_val_aim < val_aim:
-                best_val_aim = val_aim
-            if best_val_cov < val_cov:
-                best_val_cov = val_cov
-            if best_val_acc < val_acc:
-                best_val_acc = val_acc
-            if best_val_atr < val_atr:
-                best_val_atr = val_atr
-            if best_val_afr < val_afr:
-                best_val_afr = val_afr
+            # record
+            epoch.append(e)
+            train_loss_list.append(float(train_loss))
+            val_loss_list.append(float(val_loss))
+
+            train_aim_list.append(train_aim)
+            train_cov_list.append(train_cov)
+            train_acc_list.append(train_acc)
+            train_atr_list.append(train_atr)
+            train_afr_list.append(train_afr)
+
+            val_aim_list.append(val_aim)
+            val_cov_list.append(val_cov)
+            val_acc_list.append(val_acc)
+            val_atr_list.append(val_atr)
+            val_afr_list.append(val_afr)
 
             # Backward
             optimizer.zero_grad()
-            loss.backward()
+            train_loss.backward()
             optimizer.step()
-            # print(logits.is_cuda, pred.is_cuda, loss.is_cuda)
             if e % 5 == 0:
                 time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                print('TIME: {}, In epoch {}, loss: {:.8f}, learning rate: {:.5f}, alpha: {:.2f}'.format(time, e, loss, lr, alpha))
-                print('training -- aim: {:.3f}, cov: {:.3f}, acc: {:.3f}, atr: {:.3f}, afr: {:.3f}'.format(train_aim, train_cov, train_acc, train_atr, train_afr))
-                print('validation -- aim: {:.3f}, cov: {:.3f}, acc: {:.3f}, atr: {:.3f}, afr: {:.3f}'.format(val_aim, val_cov, val_acc, val_atr, val_afr))
+                print('TIME: {}, In epoch {}, learning rate: {:.5f}, alpha: {:.2f}'.format(time, e, lr, alpha))
+                print('tra -- aim: {:.3f}, cov: {:.3f}, acc: {:.3f}, atr: {:.3f}, afr: {:.3f}, loss: {:.8f}'.format(train_aim, train_cov, train_acc, train_atr, train_afr, train_loss))
+                print('val -- aim: {:.3f}, cov: {:.3f}, acc: {:.3f}, atr: {:.3f}, afr: {:.3f}, loss: {:.8f}'.format(val_aim, val_cov, val_acc, val_atr, val_afr, val_loss))
                 print('-' * 100)
-            if e == 499:
-                with open('../data/log/performance_log', 'a') as f:
-                    time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                    line = 'TIME: {}, flod {}, loss: {:.8f}\r'.format(time,fold_flag, loss)
-                    f.write(line)
-                    line = 'Training BEST -- aim: {:.3f}, cov: {:.3f}, acc: {:.3f}, atr: {:.3f}, afr: {:.3f}\r'.format(best_train_aim, best_train_cov, best_train_acc, best_train_atr, best_train_afr)
-                    f.write(line)
-                    line = 'Validation BEST -- aim: {:.3f}, cov: {:.3f}, acc: {:.3f}, atr: {:.3f}, afr: {:.3f}\n\r'.format(best_val_aim, best_val_cov, best_val_acc, best_val_atr, best_val_afr)
-                    f.write(line)
+
+
+        # figures
+        # loss
+        plt.figure(dpi=100)
+        tra_loss, = plt.plot(epoch, train_loss_list, label='training')
+        val_loss, = plt.plot(epoch, val_loss_list, label='validation')
+        plt.xlabel('epoch')
+        plt.ylabel('loss')
+        plt.title('Loss, fold: ' + str(fold_flag) + ', alpha: ' + str(alpha))
+        plt.legend([tra_loss, val_loss], ['training', 'validation'], loc="best")
+        plt.savefig(path + 'loss_fold' + str(fold_flag) + '_alpha' + str(int(alpha*10)) + '.jpg')
+        plt.show()
+
+        # aim
+        plt.figure(dpi=100)
+        tra_aim, = plt.plot(epoch, train_aim_list, label='training')
+        val_aim, = plt.plot(epoch, val_aim_list, label='validation')
+        plt.xlabel('epoch')
+        plt.ylabel('aim')
+        plt.title('Aim, fold: ' + str(fold_flag) + ', alpha: ' + str(alpha))
+        plt.legend([tra_aim, val_aim], ['training', 'validation'], loc="best")
+        plt.savefig(path + 'aim_fold' + str(fold_flag) + '_alpha' + str(int(alpha*10)) + '.jpg')
+        plt.show()
+
+        # cov
+        plt.figure(dpi=100)
+        tra_cov, = plt.plot(epoch, train_cov_list, label='training')
+        val_cov, = plt.plot(epoch, val_cov_list, label='validation')
+        plt.xlabel('epoch')
+        plt.ylabel('cov')
+        plt.title('Cov, fold: ' + str(fold_flag) + ', alpha: ' + str(alpha))
+        plt.legend([tra_cov, val_cov], ['training', 'validation'], loc="best")
+        plt.savefig(path + 'cov_fold' + str(fold_flag) + '_alpha' + str(int(alpha*10)) + '.jpg')
+        plt.show()
+
+        # acc
+        plt.figure(dpi=100)
+        tra_acc, = plt.plot(epoch, train_acc_list, label='training')
+        val_acc, = plt.plot(epoch, val_acc_list, label='validation')
+        plt.xlabel('epoch')
+        plt.ylabel('acc')
+        plt.title('Acc, fold: ' + str(fold_flag) + ', alpha: ' + str(alpha))
+        plt.legend([tra_acc, val_acc], ['training', 'validation'], loc="best")
+        plt.savefig(path + 'acc_fold' + str(fold_flag) + '_alpha' + str(int(alpha*10)) + '.jpg')
+        plt.show()
+
+        # atr
+        plt.figure(dpi=100)
+        tra_atr, = plt.plot(epoch, train_atr_list, label='training')
+        val_atr, = plt.plot(epoch, val_atr_list, label='validation')
+        plt.xlabel('epoch')
+        plt.ylabel('atr')
+        plt.title('Atr, fold: ' + str(fold_flag) + ', alpha: ' + str(alpha))
+        plt.legend([tra_atr, val_atr], ['training', 'validation'], loc="best")
+        plt.savefig(path + 'atr_fold' + str(fold_flag) + '_alpha' + str(int(alpha*10)) + '.jpg')
+        plt.show()
+
+        # afr
+        plt.figure(dpi=100)
+        tra_afr, = plt.plot(epoch, train_afr_list, label='training')
+        val_afr, = plt.plot(epoch, val_afr_list, label='validation')
+        plt.xlabel('epoch')
+        plt.ylabel('atr')
+        plt.title('Atr, fold: ' + str(fold_flag) + ', alpha: ' + str(alpha))
+        plt.legend([tra_afr, val_afr], ['training', 'validation'], loc="best")
+        plt.savefig(path + 'afr_fold' + str(fold_flag) + '_alpha' + str(int(alpha*10)) + '.jpg')
+        plt.show()
+
+        # text
+        # fold = [fold_flag] * len(train_aim_list)
+        # epoch = list(range(len(train_aim_list)))
+        # fold_log.extend(fold)
+        # epoch_log.extend(epoch)
+        # train_aim_log.extend(train_aim_list)
+        # train_cov_log.extend(train_cov_list)
+        # train_acc_log.extend(train_acc_list)
+        # train_atr_log.extend(train_atr_list)
+        # train_afr_log.extend(train_afr_list)
+        # val_aim_log.extend(val_aim_list)
+        # val_cov_log.extend(val_cov_list)
+        # val_acc_log.extend(val_acc_list)
+        # val_atr_log.extend(val_atr_list)
+        # val_afr_log.extend(val_afr_list)
+
         fold_flag = fold_flag + 1
 
-
-
+    # fold_log = np.array(fold_log).reshape(len(fold_log), 1)
+    # epoch_log = np.array(epoch_log).reshape(len(epoch_log), 1)
+    # train_aim_log = np.array(train_aim_log).reshape(len(train_aim_log), 1)
+    # val_aim_log = np.array(val_aim_log).reshape(len(val_aim_log), 1)
+    # train_cov_log = np.array(train_cov_log).reshape(len(train_cov_log), 1)
+    # val_cov_log = np.array(val_cov_log).reshape(len(val_cov_log), 1)
+    # train_acc_log = np.array(train_acc_log).reshape(len(train_acc_log), 1)
+    # val_acc_log = np.array(val_acc_log).reshape(len(val_acc_log), 1)
+    # train_atr_log = np.array(train_atr_log).reshape(len(train_atr_log), 1)
+    # val_atr_log = np.array(val_atr_log).reshape(len(val_atr_log), 1)
+    # train_afr_log = np.array(train_afr_log).reshape(len(train_afr_log), 1)
+    # val_afr_log = np.array(val_afr_log).reshape(len(val_afr_log), 1)
+    #
+    # data_log = np.concatenate((fold_log, epoch_log, train_aim_log, val_aim_log, train_cov_log, val_cov_log,
+    #                        train_acc_log, val_acc_log, train_atr_log, val_atr_log, train_afr_log, val_afr_log), axis=1)
+    #
+    # np.savetxt(path + 'evaluation_indicators.txt', data_log, fmt="%s", delimiter='  ')  # 需要加入alpha
 
