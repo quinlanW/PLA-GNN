@@ -80,7 +80,7 @@ def train(g, criterion, lr, alpha, device):
     path = '../data/log/'
 
     for train_idx, val_idx in kfold.split(label):
-        model = GCN(g.ndata['feat'].shape[1], 3000, 12, 12).to(device)
+        model = GCN(g.ndata['feat'].shape[1], 500, 12).to(device)
         optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
         # index conversion
@@ -152,28 +152,29 @@ def train(g, criterion, lr, alpha, device):
                 print('val -- aim: {:.3f}, cov: {:.3f}, acc: {:.3f}, atr: {:.3f}, afr: {:.3f}, loss: {:.8f}'.format(val_aim, val_cov, val_acc, val_atr, val_afr, val_loss))
 
                 # print(labels[train_index])
-                print(pred[train_index])
-                # logits_1 = np.array_str(logits[1].detach().numpy(), max_line_width=np.inf)
-                # pred_1 = np.array_str(pred[1].detach().numpy().astype(int))
-                # labels_1 = np.array_str(labels[1].detach().numpy())
-                #
-                # print(logits_1)
-                # print(pred_1)
-                # print(labels_1)
-                #
-                # logits_23 = np.array_str(logits[161].detach().numpy(), max_line_width=np.inf)
-                # pred_23 = np.array_str(pred[161].detach().numpy().astype(int))
-                # labels_23 = np.array_str(labels[161].detach().numpy())
-                # print(logits_23)
-                # print(pred_23)
-                # print(labels_23)
-                #
-                # logits_100 = np.array_str(logits[5679].detach().numpy(), max_line_width=np.inf)
-                # pred_100 = np.array_str(pred[5679].detach().numpy().astype(int))
-                # labels_100 = np.array_str(labels[5679].detach().numpy())
-                # print(logits_100)
-                # print(pred_100)
-                # print(labels_100)
+                # print(pred[train_index])
+
+                logits_1 = np.array_str(logits[1].detach().numpy(), max_line_width=np.inf)
+                pred_1 = np.array_str(pred[1].detach().numpy().astype(int))
+                labels_1 = np.array_str(labels[1].detach().numpy())
+
+                print(logits_1)
+                print(pred_1)
+                print(labels_1)
+
+                logits_23 = np.array_str(logits[161].detach().numpy(), max_line_width=np.inf)
+                pred_23 = np.array_str(pred[161].detach().numpy().astype(int))
+                labels_23 = np.array_str(labels[161].detach().numpy())
+                print(logits_23)
+                print(pred_23)
+                print(labels_23)
+
+                logits_100 = np.array_str(logits[5679].detach().numpy(), max_line_width=np.inf)
+                pred_100 = np.array_str(pred[5679].detach().numpy().astype(int))
+                labels_100 = np.array_str(labels[5679].detach().numpy())
+                print(logits_100)
+                print(pred_100)
+                print(labels_100)
 
                 print('-' * 100)
 

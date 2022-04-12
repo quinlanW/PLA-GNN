@@ -23,12 +23,18 @@ if __name__ == "__main__":
     # print(interaction)
     # print(len(interaction))
 
-    a = th.Tensor([
-        [1, 2, 3],
-        [4, 5, 6]
-    ])
+    # a = th.Tensor([
+    #     [1, 2, 3],
+    #     [4, 5, 6]
+    # ])
+    #
+    # b = a.sum(dim=1).reshape(len(a), 1)
+    # print(b)
+    # a = a / b
+    # print(a)
 
-    b = a.sum(dim=1).reshape(len(a), 1)
-    print(b)
-    a = a / b
-    print(a)
+    LOC = load_npz('../data/generate_materials/loc_matrix.npz').toarray()
+    loc_sum = LOC.sum(0)
+    print(loc_sum)
+    print(loc_sum.shape)
+    # [25 1495   58  350  365  384   36  469   71  274 1509  974]
