@@ -135,9 +135,9 @@ def matrix_deflation(mat, uni_list, start, end):
 
 
 def construct_normal_ppi(data='../data/support_materials/BIOGRID-ORGANISM-Homo_sapiens-4.4.203.mitab.txt', start=0, end=0):
-    interaction_data = extract_interaction_data(data_file=data)  # 蛋白质相互作用json文件
-    map_dict = id_mapping(query_list=interaction_data['id_list'], original_id='BIOGRID_ID', target_id='ACC', direction=0, series='')  # 映射json文件
-    ppi, protein_list = construct_uniprot_ppi(mapping_dict=map_dict, interaction_list=interaction_data['interaction_list'])  # 蛋白质相互作用网络npz文件，相互作用网络中蛋白质列表json文件
+    interaction_data = extract_interaction_data(data_file=data)
+    map_dict = id_mapping(query_list=interaction_data['id_list'], original_id='BIOGRID_ID', target_id='ACC', direction=0, series='')
+    ppi, protein_list = construct_uniprot_ppi(mapping_dict=map_dict, interaction_list=interaction_data['interaction_list'])
     mat, uniprot_list = matrix_deflation(ppi, protein_list, start, end)
 
     return mat, uniprot_list
@@ -291,22 +291,19 @@ def construct_co_expression_matrix(sample_dict, uniprot_list, expression_data, s
     ncol = len(expression_data['id'])
     nrow = len(uniprot_list)
 
-    expr = np.zeros((nrow, ncol))  # 表达矩阵 -- 根据method将一个protein对应的多行数据处理为一行
+    expr = np.zeros((nrow, ncol))
     co_expr = np.zeros((nrow, nrow))
     method = np.median if method == 'median' else eval('np.ndarray.' + method)
 
-    # 处理蛋白质表达矩阵
     for protein in tqdm(uniprot_list, desc='processing protein expression matrix'):
     # for protein in uniprot_list:
         if protein in expression_data:
-            protein_ref = uniprot_list.index(protein)  # 得到对应蛋白质的下标
+            protein_ref = uniprot_list.index(protein)
             values = np.array(expression_data[protein])
             # print(protein, values.shape)
-            expr[protein_ref] = method(values, 0)  # 通过method处理成一行
-
-    normal_ref = []  # 正常样本下标
-    intervention_ref = []  # 干预样本下标
-    # 分离正常样本和药物干预样本
+            expr[protein_ref] = method(values, 0)
+    normal_ref = []
+    intervention_ref = []
     for flag, samples in tqdm(sample_dict.items(), desc='separate samples'):
         # for flag, samples in sample_dict.items():
         if flag == 'normal':
@@ -319,7 +316,6 @@ def construct_co_expression_matrix(sample_dict, uniprot_list, expression_data, s
     normal_expr = np.zeros((nrow, 0))
     intervention_expr = np.zeros((nrow, 0))
 
-    # 构建不同条件下的表达矩阵
     for ref in tqdm(normal_ref, desc='normal samples expression matrix construction'):
         # for ref in normal_ref:
         sample_expr = expr[0:, ref: ref + 1]
@@ -330,23 +326,21 @@ def construct_co_expression_matrix(sample_dict, uniprot_list, expression_data, s
         intervention_expr = np.hstack((intervention_expr, sample_expr))
 
     with tqdm(total=5, desc='co-expression correlation coefficient matrix construction') as coexpr_bar:
-        # 计算共表达相关系数（皮尔逊相关系数）
         pcc_normal = np.corrcoef(normal_expr)
         coexpr_bar.update()
         pcc_intervention = np.corrcoef(intervention_expr)
         coexpr_bar.update()
-        np.fill_diagonal(pcc_normal, 0)  # 填充对角线
+        np.fill_diagonal(pcc_normal, 0)
         np.fill_diagonal(pcc_intervention, 0)
         coexpr_bar.update()
 
-        # 转化为稀疏矩阵
-        pcc_normal_nan = np.isnan(pcc_normal)  # nan元素位置 True
+        pcc_normal_nan = np.isnan(pcc_normal)
         pcc_intervetion_nan = np.isnan(pcc_intervention)
-        pcc_normal[pcc_normal_nan] = 0  # nan替换为0 不替换的话稀疏矩阵会存nan
+        pcc_normal[pcc_normal_nan] = 0
         pcc_intervention[pcc_intervetion_nan] = 0
         pcc_nor = coo_matrix(pcc_normal)
         coexpr_bar.update()
-        pcc_inter = coo_matrix(pcc_intervention) # 考虑csr
+        pcc_inter = coo_matrix(pcc_intervention)
         coexpr_bar.update()
     coexpr_bar.close()
 
@@ -356,14 +350,14 @@ def construct_co_expression_matrix(sample_dict, uniprot_list, expression_data, s
 def construct_disease_comparison_gcn(data, uniprot_list, sample, file_type='soft'):
     expr_data, map_dict = {}, {}
     if file_type == 'soft':
-        expr_data = extract_expression_data_from_soft_file(data_file=data)  # 基因表达json文件
-        map_dict = id_mapping(query_list=expr_data['id_list'], original_id='P_ENTREZGENEID', target_id='ACC', direction=0, series=expr_data['series'])  # 映射json文件
+        expr_data = extract_expression_data_from_soft_file(data_file=data)
+        map_dict = id_mapping(query_list=expr_data['id_list'], original_id='P_ENTREZGENEID', target_id='ACC', direction=0, series=expr_data['series'])
     elif file_type == 'csv':
-        expr_data = extract_expression_data_from_csv_file(data_file=data)  # 基因表达json文件
-        map_dict = id_mapping(query_list=expr_data['id_list'], original_id='ENSEMBL_ID', target_id='ACC', direction=0, series=expr_data['series'])  # 映射json文件
+        expr_data = extract_expression_data_from_csv_file(data_file=data)
+        map_dict = id_mapping(query_list=expr_data['id_list'], original_id='ENSEMBL_ID', target_id='ACC', direction=0, series=expr_data['series'])
 
-    protein_expr = construct_protein_expression_dict(expression_data=expr_data['expr_dict'], map_dict=map_dict, uniprot_list=uniprot_list, series=expr_data['series'])  # 蛋白质表达json文件
-    gcn_normal, gcn_disease = construct_co_expression_matrix(sample_dict=sample, uniprot_list=uniprot_list, expression_data=protein_expr, series=expr_data['series'], method='median')  # 两种条件下的共表达相关系数网络npz文件
+    protein_expr = construct_protein_expression_dict(expression_data=expr_data['expr_dict'], map_dict=map_dict, uniprot_list=uniprot_list, series=expr_data['series'])
+    gcn_normal, gcn_disease = construct_co_expression_matrix(sample_dict=sample, uniprot_list=uniprot_list, expression_data=protein_expr, series=expr_data['series'], method='median')
 
     return gcn_normal, gcn_disease, expr_data['series']
 
@@ -441,7 +435,7 @@ def modify_network_topology(ppi_net, pcc_nor, pcc_inter, series):
 
 def construct_matrix_of_normal_and_disease_cond(data, start, end):
     ppi_normal, protein_list = construct_normal_ppi(start=start, end=end)
-    ecc_normal = edge_clustering_coefficients(ppi_net=ppi_normal)  # 正常条件ecc npz文件
+    ecc_normal = edge_clustering_coefficients(ppi_net=ppi_normal)
 
     for sample_data in data.values():
         file_type = sample_data[1].split('.')[-1]
@@ -449,11 +443,11 @@ def construct_matrix_of_normal_and_disease_cond(data, start, end):
                                                                            uniprot_list=protein_list,
                                                                            sample=sample_data[2], file_type=file_type)
         ppi_disease = modify_network_topology(ppi_net=ppi_normal, pcc_nor=gcn_normal, pcc_inter=gcn_disease,
-                                              series=series)  # 疾病条件ppi npz文件
-        ecc_disease = edge_clustering_coefficients(ppi_net=ppi_disease)  # 疾病状态ecc npz文件
+                                              series=series)
+        ecc_disease = edge_clustering_coefficients(ppi_net=ppi_disease)
 
         normal_path = '../data/generate_materials/'
-        protein_list_path = normal_path + 'protein_ppi.json'  # 正常条件下蛋白质相互作用网络中的的蛋白质节点
+        protein_list_path = normal_path + 'protein_ppi.json'
         if not os.path.exists(normal_path + 'PPI_normal.npz'):
             sparse.save_npz(normal_path + 'PPI_normal', ppi_normal)
         if not os.path.exists(normal_path + 'ECC_normal.npz'):
@@ -560,7 +554,7 @@ def construct_protein_loc_matrix(label_list):
         if localizations:
             for localization in localizations:
                 col = loc_list.index(localization)
-                data = 1
+                data = 1.
                 loc_row.append(row)
                 loc_col.append(col)
                 loc_data.append(data)
@@ -695,8 +689,8 @@ if __name__ == '__main__':
             }
         },
     }
-    construct_matrix_of_normal_and_disease_cond(data_dict, 5000, 20000)
-    construct_loc_matrix()  # 加入虚拟蛋白需要修改注释部分
+    construct_matrix_of_normal_and_disease_cond(data_dict, 5000, 15000)
+    construct_loc_matrix()
 
     ppi = sparse.load_npz('../data/generate_materials/PPI_normal.npz')
     ecc = sparse.load_npz('../data/generate_materials/ECC_normal.npz')
@@ -704,24 +698,40 @@ if __name__ == '__main__':
     print(ppi.shape, ecc.shape, gcn.shape)
 
 
+    loc_mat = sparse.load_npz('../data/generate_materials/loc_matrix.npz').toarray()
+    with open('../data/generate_materials/label_with_loc_list.json') as f:
+        idx = json.load(f)
+    print(loc_mat.sum(0))
+    print(len(loc_mat))
+    print(len(idx))
+    minor_mask = [1, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0]
+    large_mask = [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1]
+    minor = []
+    large = []
+    both = []
+    for locs_idx in range(len(loc_mat)):
+        locs = loc_mat[locs_idx]
+        if locs.sum() == 0:
+            continue
+        minor_res = np.logical_and(locs, minor_mask).astype(int)
+        large_res = np.logical_and(locs, large_mask).astype(int)
+        if minor_res.sum() != 0 and large_res.sum() != 0:
+            both.append(locs_idx)
+        else:
+            if minor_res.sum() != 0:
+                minor.append(locs_idx)
+            if large_res.sum() != 0:
+                large.append(locs_idx)
 
-    # with open('../data/generate_materials/label_list.json') as f:
-    #     label = json.load(f)
-    # extract_data_with_position(label)
+    label_mm = [large, minor, both]
+    with open('../data/generate_materials/label_with_fig.json', 'w') as f:
+        json.dump(label_mm, f)
 
 
 
-    # add virtual protein
-    # ppi = sparse.load_npz('../data/generate_materials/PPI_normal.npz')
-    # ecc = sparse.load_npz('../data/generate_materials/ECC_normal.npz')
-    # gcn = sparse.load_npz('../data/generate_materials/GCN_normal.npz')
-    # with open('../data/generate_materials/label_list.json') as f:
-    #     label = json.load(f)
-    # with open('../data/generate_materials/vir_label_list.json') as f:
-    #     vir_label = json.load(f)
-    # ppi_mat, ecc_mat, gcn_mat = construct_graph_data(ppi, gcn, label, vir_label)
-    #
-    # normal_path = '../data/generate_materials/'
-    # sparse.save_npz(normal_path + 'vir_PPI_normal', ppi_mat)
-    # sparse.save_npz(normal_path + 'vir_ECC_normal', ecc_mat)
-    # sparse.save_npz(normal_path + 'vir_GCN_normal', gcn_mat)
+
+
+
+
+
+

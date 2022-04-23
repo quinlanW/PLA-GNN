@@ -1,34 +1,37 @@
-import numpy as np
-
-from model import *
+import argparse
 from train import *
 from utils import *
-from torch.nn import MultiLabelSoftMarginLoss
 
 
-ppi = load_npz('../data/generate_materials/PPI_normal.npz')
-gcn = load_npz('../data/generate_materials/GCN_normal.npz').tocsr().multiply(ppi.tocsr()).tocoo()
-ecc = load_npz('../data/generate_materials/ECC_normal.npz')
-loc = load_npz('../data/generate_materials/loc_matrix.npz')
-with open('../data/generate_materials/protein_ppi.json', 'r') as f:
-    uniprot = json.load(f)
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-lr', type=float, default=0.00001, metavar='learning rate')
+    parser.add_argument('-f', type=int, default=2, metavar='fold num')
+    parser.add_argument('-e', type=int, default=300, metavar='epoch num')
+    parser.add_argument('-a', nargs='*', default=[0.1], metavar='alpha list')
+    parser.add_argument('-b', nargs='*', default=[0.2, 0.4, 0.6], metavar='beta list')
+    parser.add_argument('-d', type=str, default='cuda', metavar='device')
 
-loc_mat = load_npz('../data/generate_materials/loc_matrix.npz').toarray()
-loc_num = loc_mat.sum(axis=0)
-weight = th.Tensor(loc_num.sum() / loc_num)
+    args = parser.parse_args()
 
-# print(torch.cuda.is_available())
-# print(torch.cuda.device_count())  # 有几个可用的gpu
-# print(torch.cuda.current_device())  # 可用gpu编号
-# print(torch.cuda.get_device_capability(device=None),  torch.cuda.get_device_name(device=None))
-# torch.cuda.set_device(0)
-# device = 'cuda:0'
-device = 'cpu'
+    lr = args.lr
+    fold_num = args.f
+    epoch_num = args.e
+    alpha_list = list(map(float, args.a))
+    beta_list = list(map(float, args.b))
+    device = args.d
 
-g = create_graph(ppi, ecc, gcn, loc, uniprot)
-g = g.to(device)
-criterion = MultiLabelSoftMarginLoss(weight=weight)
-for alp in [0.2, 0.3, 0.1]:  # , 0.3]:
-    train(g, criterion, lr=0.000005, alpha=alp, device=device)
+    print('learning rate:{:.8f}, fold num:{:}, epoch num:{:}, alpha list:{}, beta:{}, device:{}'
+          .format(lr, fold_num, epoch_num, alpha_list, beta_list, device))
 
+    ppi = load_npz('../data/generate_materials/PPI_normal.npz')
+    gcn = load_npz('../data/generate_materials/GCN_normal.npz').tocsr().multiply(ppi.tocsr()).tocoo()
+    ecc = load_npz('../data/generate_materials/ECC_normal.npz')
+    loc = load_npz('../data/generate_materials/loc_matrix.npz')
+    with open('../data/generate_materials/protein_ppi.json', 'r') as f:
+        uniprot = json.load(f)
+
+    g = create_graph(ppi, ecc, gcn, loc, uniprot)
+    g = g.to(device)
+    train(g, lr=lr, fold_num=fold_num, epoch_num=epoch_num, alpha_list=alpha_list, beta_list=beta_list, device=device)
 
