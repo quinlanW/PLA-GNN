@@ -5,13 +5,12 @@ from utils import *
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('-lr', type=float, default=0.00001, metavar='learning rate')
-    parser.add_argument('-f', type=int, default=2, metavar='fold num')
+    parser.add_argument('-lr', type=float, default=0.001, metavar='learning rate')
+    parser.add_argument('-f', type=int, default=5, metavar='fold num')
     parser.add_argument('-e', type=int, default=300, metavar='epoch num')
     parser.add_argument('-a', nargs='*', default=[0.1], metavar='alpha list')
-    parser.add_argument('-b', nargs='*', default=[0.2, 0.4, 0.6], metavar='beta list')
+    parser.add_argument('-b', nargs='*', default=[1], metavar='beta list')
     parser.add_argument('-d', type=str, default='cuda', metavar='device')
-
     args = parser.parse_args()
 
     lr = args.lr
@@ -25,8 +24,8 @@ if __name__ == '__main__':
           .format(lr, fold_num, epoch_num, alpha_list, beta_list, device))
 
     ppi = load_npz('../data/generate_materials/PPI_normal.npz')
-    gcn = load_npz('../data/generate_materials/GCN_normal.npz').tocsr().multiply(ppi.tocsr()).tocoo()
-    ecc = load_npz('../data/generate_materials/ECC_normal.npz')
+    gcn = np.load('../data/generate_materials/ECC_normal_pca.npy')
+    ecc = np.load('../data/generate_materials/GCN_normal_pca.npy')
     loc = load_npz('../data/generate_materials/loc_matrix.npz')
     with open('../data/generate_materials/protein_ppi.json', 'r') as f:
         uniprot = json.load(f)
