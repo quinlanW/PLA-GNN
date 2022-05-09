@@ -23,7 +23,7 @@ def create_graph(ppi, ecc, gcn, loc, uniprot):
 
 
 def pca(mat):
-    pca = PCA(n_components=2500)
+    pca = PCA(n_components=2500, random_state=42)
     new_node_feat = pca.fit_transform(mat)
 
     return new_node_feat
@@ -112,17 +112,21 @@ def smote(loc, ppi, scale=0.5):
 
 
 if __name__ == '__main__':
-    loc = load_npz('../data/generate_materials/loc_matrix.npz')
     ppi = load_npz('../data/generate_materials/PPI_normal.npz')
-    smote(loc, ppi)
-#     ppi = load_npz('../data/generate_materials/PPI_normal.npz')
-#     gcn = load_npz('../data/generate_materials/GCN_normal.npz').tocsr().multiply(ppi.tocsr()).toarray()
-#     ecc = load_npz('../data/generate_materials/ECC_normal.npz').toarray()
-#     ecc_pca = pca(ecc)
-#     gcn_pca = pca(gcn)
-#     np.save('../data/generate_materials/ECC_normal_pca', ecc_pca)
-#     np.save('../data/generate_materials/GCN_normal_pca', gcn_pca)
+    gcn = load_npz('../data/generate_materials/GCN_normal.npz').tocsr().multiply(ppi.tocsr()).toarray()
+    ecc = load_npz('../data/generate_materials/ECC_normal.npz').toarray()
+    ecc_pca = pca(ecc)
+    gcn_pca = pca(gcn)
+    np.save('../data/generate_materials/ECC_normal_pca', ecc_pca)
+    np.save('../data/generate_materials/GCN_normal_pca', gcn_pca)
 
+    ppi_inter = load_npz('../data/generate_materials/GSE30931_data/PPI_inter.npz')
+    gcn_inter = load_npz('../data/generate_materials/GSE30931_data/GCN_inter.npz').tocsr().multiply(ppi.tocsr()).toarray()
+    ecc_inter = load_npz('../data/generate_materials/GSE30931_data/ECC_inter.npz').toarray()
+    ecc_inter_pca = pca(ecc_inter)
+    gcn_inter_pca = pca(gcn_inter)
+    np.save('../data/generate_materials/ECC_inter_pca', ecc_inter_pca)
+    np.save('../data/generate_materials/GCN_inter_pca', gcn_inter_pca)
 
 
 

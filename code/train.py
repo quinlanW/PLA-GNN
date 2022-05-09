@@ -69,14 +69,10 @@ def multi_loss(input, target, b_weight, i_weight):
     for i in range(len(b_weight)):
         scl_input = input[:, i]
         scl_target = target[:, i]
-        # scl_loss = (scl_target * torch.log(scl_input) * i_weight[i] + (1 - scl_target) * torch.log(1 - scl_input)) / (i_weight[i] + 1) * 2
-        scl_loss = (scl_target * torch.log(torch.clamp(scl_input, 1e-6, 10.)) * i_weight[i] +
-                   (1 - scl_target) * torch.log(torch.clamp(1 - scl_input, 1e-6, 10.))) / (i_weight[i] + 1) * 2
-        # print(scl_input.isnan())
-        # print(torch.log(scl_input).isinf())
-        # print('-'*20)
-        # scl_loss = scl_target * torch.log(scl_input)
-        # scl_loss = scl_target * torch.log(scl_input) * (1 - scl_input) ** 2 + (1 - scl_target) * torch.log(1 - scl_input) * (1 - scl_input) ** 2
+        ## scl_loss = (scl_target * torch.log(scl_input) * i_weight[i] + (1 - scl_target) * torch.log(1 - scl_input)) / (i_weight[i] + 1) * 2
+        scl_loss = (scl_target * torch.log(torch.clamp(scl_input, 1e-6, 10.)) * i_weight[i] + (1 - scl_target) * torch.log(torch.clamp(1 - scl_input, 1e-6, 10.))) / (i_weight[i] + 1) * 2
+        # scl_loss = (scl_target * torch.log(torch.clamp(scl_input, 1e-6, 10.)) * i_weight[i] * ((1 - scl_input) ** 2) + (1 - scl_target) * torch.log(torch.clamp(1 - scl_input, 1e-6, 10.)) * ((1 - scl_input) ** 2)) / (i_weight[i] + 1) * 2
+        # scl_loss = scl_target * torch.log(torch.clamp(scl_input, 1e-6, 10.))
         scl_loss = -scl_loss.sum() / len(input)
         loss += scl_loss * b_weight[i]
     loss = loss / b_weight.sum()
@@ -101,15 +97,10 @@ def weight_cal(loc_mat, beta):
     return b_weight, i_weight
 
 
-def train(g, lr, fold_num, epoch_num, alpha_list, beta_list, device):
+def train(g, lr, fold_num, epoch_num, alpha_list, beta_list, device, path):
     # nodes features and labels
     features = g.ndata['feat']
     labels = g.ndata['loc']
-
-    # setting loss mode (custom loss / multi label soft margin loss)
-    custom_loss = True
-    if not custom_loss:
-        beta_list = [1]
 
     train_dict, val_dict, large_dict, minor_dict, both_dict = {}, {}, {}, {}, {}
     epoch = list(range(epoch_num))
@@ -118,12 +109,6 @@ def train(g, lr, fold_num, epoch_num, alpha_list, beta_list, device):
         # weight
         loc_mat = load_npz('../data/generate_materials/loc_matrix.npz').toarray()
         b_weight, i_weight = weight_cal(loc_mat, beta=beta)
-
-        # loss setting
-        if not custom_loss:
-            criterion = MultiLabelSoftMarginLoss(weight=b_weight)
-        else:
-            criterion = 0
 
         # loading files (for label and mask)
         with open('../data/generate_materials/label_with_loc_list.json') as f:
@@ -140,7 +125,7 @@ def train(g, lr, fold_num, epoch_num, alpha_list, beta_list, device):
         minor_label = fig_label[1]
         both_label = fig_label[2]
 
-        kfold = KFold(n_splits=fold_num, random_state=40, shuffle=True)
+        kfold = KFold(n_splits=fold_num, random_state=42, shuffle=True)
 
         train_dict_a, val_dict_a, large_dict_a, minor_dict_a, both_dict_a = {}, {}, {}, {}, {}
 
@@ -151,10 +136,11 @@ def train(g, lr, fold_num, epoch_num, alpha_list, beta_list, device):
 
             for train_idx, val_idx in kfold.split(label):
                 # model = GNN11(g.ndata['feat'].shape[1], 3000, 12, dropout=0.1).to(device)
-                model = GNN12(g.ndata['feat'].shape[1], 3000, 500, 12, dropout=0).to(device)
-                # summary(model, (g.ndata['feat'].shape[1], 3000, 500, 12), device=device)
+                # model = GNN12(g.ndata['feat'].shape[1], 3000, 500, 12, dropout=0.5).to(device)
                 # model = GNN21(g.ndata['feat'].shape[1], 3000, 500, 12, dropout=0.1).to(device)
-                # model = GNN22(g.ndata['feat'].shape[1], 3000, 1500, 500, 12, dropout=0.1).to(device)
+                # model = GNN22(g.ndata['feat'].shape[1], 3000, 1500, 500, 12).to(device)
+                # model = GNN31(g.ndata['feat'].shape[1], 3000, 1500, 500, 12).to(device)
+                model = GNN32(g.ndata['feat'].shape[1], 3000, 1500, 500, 200, 12).to(device)
                 optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
                 # index conversion
@@ -198,32 +184,20 @@ def train(g, lr, fold_num, epoch_num, alpha_list, beta_list, device):
 
                     # Compute loss
                     # Note that you should only compute the losses of the nodes in the training set.
-                    if custom_loss:
+                    train_loss = multi_loss(logits[train_index], labels[train_index], b_weight, i_weight)
+                    train_loss.backward()
+                    optimizer.step()
+                    model.eval()
+                    val_loss = multi_loss(logits[val_index], labels[val_index], b_weight, i_weight)
 
-                        train_loss = multi_loss(logits[train_index], labels[train_index], b_weight, i_weight)
-                        train_loss.backward()
-                        optimizer.step()
-                        model.eval()
-                        val_loss = multi_loss(logits[val_index], labels[val_index], b_weight, i_weight)
-                        # val_loss = 0
-                        large_loss, minor_loss, both_loss = 0, 0, 0
-                        # if len(large_idx):
-                        #     large_loss = multi_loss(logits[large_idx], labels[large_idx], b_weight, i_weight)
-                        # if len(minor_idx):
-                        #     minor_loss = multi_loss(logits[minor_idx], labels[minor_idx], b_weight, i_weight)
-                        # if len(both_idx):
-                        #     both_loss = multi_loss(logits[both_idx], labels[both_idx], b_weight, i_weight)
-                    else:
-                        train_loss = criterion(logits[train_index], labels[train_index])
-                        val_loss = criterion(logits[val_index], labels[val_index])
+                    large_loss, minor_loss, both_loss = 0, 0, 0
+                    if len(large_idx):
+                        large_loss = multi_loss(logits[large_idx], labels[large_idx], b_weight, i_weight)
+                    if len(minor_idx):
+                        minor_loss = multi_loss(logits[minor_idx], labels[minor_idx], b_weight, i_weight)
+                    if len(both_idx):
+                        both_loss = multi_loss(logits[both_idx], labels[both_idx], b_weight, i_weight)
 
-                        large_loss, minor_loss, both_loss = 0, 0, 0
-                        if len(large_idx):
-                            large_loss = criterion(logits[large_idx], labels[large_idx])
-                        if len(minor_idx):
-                            minor_loss = criterion(logits[minor_idx], labels[minor_idx])
-                        if len(both_idx):
-                            both_loss = criterion(logits[both_idx], labels[both_idx])
 
                     # Compute accuracy on training/validation
                     train_aim, train_cov, train_acc, train_atr, train_afr = proformances_record(labels[train_index], pred[train_index])
@@ -311,7 +285,7 @@ def train(g, lr, fold_num, epoch_num, alpha_list, beta_list, device):
                                           p_pred_scale[10], p_pred_num[10], p_pred_scale[11], p_pred_num[11]), end='')
                         print('-' * 190)
                         # txt log
-                        txt_path = '../data/log/txt_log.txt'
+                        txt_path = path + 'txt_log.txt'
                         with open(txt_path, 'a') as f:
                             if e == 0:
                                 f.write('-' * 190)
@@ -376,7 +350,7 @@ def train(g, lr, fold_num, epoch_num, alpha_list, beta_list, device):
     # classification by beta & alpha
     for beta in beta_list:
         # mkdir - beta
-        beta_path = '../data/log/b' + str(int(beta*10)) + '/'
+        beta_path = path + 'b' + str(int(beta*10)) + '/'
         if not os.path.exists(beta_path):
             os.mkdir(beta_path)
         for alpha in alpha_list:
@@ -419,7 +393,7 @@ def train(g, lr, fold_num, epoch_num, alpha_list, beta_list, device):
 
     # mix
     for beta in beta_list:
-        beta_path = '../data/log/b' + str(int(beta * 10)) + '/'
+        beta_path = path + 'b' + str(int(beta * 10)) + '/'
         # mix alpha
         for i in range(fold_num):
             for key in ['aim', 'cov', 'acc', 'atr', 'afr', 'loss']:

@@ -5,6 +5,7 @@ import gzip
 import urllib.parse
 import urllib.request
 import numpy as np
+import pandas as pd
 from scipy import sparse
 from scipy.sparse import coo_matrix
 from pathlib import Path
@@ -143,223 +144,273 @@ def construct_normal_ppi(data='../data/support_materials/BIOGRID-ORGANISM-Homo_s
     return mat, uniprot_list
 
 
-def extract_expression_data_from_soft_file(data_file):
-    with open(data_file) as f:
-        file_data = f.readlines()
+# def extract_expression_data_from_soft_file(data_file):
+#     with open(data_file) as f:
+#         file_data = f.readlines()
+#
+#     series = ''
+#     probe_gene_dict = {}  # store probe 2 entrez gene
+#     probe_expr_dict = {}  # store expression matrix
+#     entrez_gene_id_list = []  # store platform probe correspond enterz gene id
+#
+#     not_data_flag = ['!platform_table_begin', '!sample_table_begin', 'ID_REF	VALUE']
+#     col_name_flag = 'ENTREZ_GENE_ID'
+#     sample_id_flag = False
+#     platform_append_flag = False
+#     matrix_append_flag = False
+#     probe_ref = 0
+#     entrez_gene_ref = 0
+#     for line in tqdm(file_data, desc='Extracting expression information'):  # for line in file_data:
+#         # for platform data
+#         if line.startswith('^SERIES'):
+#             series = line.split()[-1].strip()  # get series
+#         if line.startswith('!platform_table_begin'):
+#             platform_append_flag = True
+#         if line.startswith('!platform_table_end'):
+#             platform_append_flag = False
+#         if platform_append_flag:  # get entrez gene id and correspond probe id
+#             if col_name_flag in line.strip().split('\t'):
+#                 probe_ref = line.strip().split('\t').index('ID')
+#                 entrez_gene_ref = line.strip().split('\t').index('ENTREZ_GENE_ID')
+#             elif line.strip() not in not_data_flag:
+#                 # for mapping dict
+#                 probe = line.split('\t')[probe_ref].strip()
+#                 gene_id_str = line.split('\t')[entrez_gene_ref].strip()
+#                 if gene_id_str:  # 存在大量的probe没有对应的entrez gene id ！！！！！！
+#                     for gene_id in gene_id_str.split('///'):
+#                         gene_id = gene_id.strip()
+#                         if probe in probe_gene_dict:
+#                             probe_gene_dict[probe].append(gene_id)
+#                         else:
+#                             probe_gene_dict[probe] = [gene_id, ]  # first time
+#         # for expression matrix data
+#         sample_id = ''
+#         if line.startswith('^SAMPLE'):
+#             sample_id_flag = True
+#             sample_id = line.split('=')[1].strip()
+#             if 'probe_id' in probe_expr_dict:
+#                 probe_expr_dict['probe_id'].append(sample_id)
+#             else:
+#                 probe_expr_dict['probe_id'] = [sample_id, ]  # first time
+#         if sample_id_flag:
+#             if line.startswith('!sample_table_begin'):
+#                 matrix_append_flag = True
+#             if line.startswith('!sample_table_end'):
+#                 matrix_append_flag = False
+#                 sample_id_flag = False
+#             if matrix_append_flag:
+#                 if line.strip() not in not_data_flag:
+#                     probe = line.split()[0].strip()
+#                     value = float(line.split()[1].strip())
+#                     if probe in probe_expr_dict:
+#                         probe_expr_dict[probe].append(value)
+#                     else:
+#                         probe_expr_dict[probe] = [value, ]  # first time
+#
+#     gene_expr_dict = {}
+#     gene_expr_dict['id'] = probe_expr_dict['probe_id']
+#     for probe, genes in tqdm(probe_gene_dict.items(), desc='construct gene expression dict'):
+#         for gene in genes:
+#             if gene in gene_expr_dict:
+#                 gene_expr_dict[gene].append(probe_expr_dict[probe])
+#                 print(gene)
+#                 print(probe_expr_dict[probe])
+#             else:
+#                 gene_expr_dict[gene] = [probe_expr_dict[probe], ]
+#                 print(gene)
+#                 print(probe_expr_dict[probe])
+#             # entrez gene id list
+#             print('-'*30)
+#             entrez_gene_id_list.append(gene)
+#
+#     return_dict = {
+#         'series': series,
+#         'id_list': entrez_gene_id_list,
+#         'expr_dict': gene_expr_dict
+#     }
+#
+#     data_path = '../data/generate_materials/' + series + '_data'
+#     isExists = os.path.exists(data_path)
+#     if not isExists:
+#         os.makedirs(data_path)
+#
+#     return return_dict
+#
+#
+# def extract_expression_data_from_csv_file(data_file):
+#     """
+#     Extracting expression data from CSV format files
+#
+#     :param data_file: File path
+#     :param file: Generate files
+#     :return: Dictionary with series, ids and expression data
+#     """
+#     series = data_file.split('/')[-1].split('_')[0]
+#     ensemble_id_list = []
+#     expr_dict = {}
+#     head_flag = True
+#     with open(data_file) as csv_file:
+#         data = csv.reader(csv_file)
+#         for line in tqdm(data, desc='Extracting expression information'):  # for line in data:
+#             ensemble_id = line[0]
+#             values = line[1:]
+#             if head_flag:
+#                 head_flag = False
+#                 expr_dict['id'] = values
+#                 continue
+#             values = list(map(float, values))
+#             expr_dict[ensemble_id] = values
+#             ensemble_id_list.append(ensemble_id)
+#
+#     return_dict = {
+#         'series': series,
+#         'id_list': ensemble_id_list,
+#         'expr_dict': expr_dict
+#     }
+#
+#     data_path = '../data/generate_materials/' + series + '_data'
+#     isExists = os.path.exists(data_path)
+#     if not isExists:
+#         os.makedirs(data_path)
+#
+#     return return_dict
+#
+#
+# def construct_protein_expression_dict(expression_data, map_dict, uniprot_list, series):
+#     protein_expr_dict = {'id': expression_data['id']}
+#     for protein_id in tqdm(expression_data, desc='construct protein expression dict'):
+#         if protein_id in map_dict:  # Determine if the ID is in the mapping
+#             protein_list = map_dict[protein_id]  # Get the list of proteins corresponding to the ID
+#             for protein in protein_list:
+#                 if protein in uniprot_list:  # Determine if a protein is in the set of interaction network nodes
+#                     if protein not in protein_expr_dict:
+#                         # protein_expr_dict[protein] = [expression_data[protein_id], ]
+#                         protein_expr_dict[protein] = expression_data[protein_id]
+#                     else:
+#                         for item in expression_data[protein_id]:
+#                             protein_expr_dict[protein].append(item)
+#
+#     return protein_expr_dict
+#
+#
+# def construct_co_expression_matrix(sample_dict, uniprot_list, expression_data, series, method='median'):
+#     ncol = len(expression_data['id'])
+#     nrow = len(uniprot_list)
+#
+#     expr = np.zeros((nrow, ncol))
+#     co_expr = np.zeros((nrow, nrow))
+#     method = np.median if method == 'median' else eval('np.ndarray.' + method)
+#
+#     for protein in tqdm(uniprot_list, desc='processing protein expression matrix'):
+#     # for protein in uniprot_list:
+#         if protein in expression_data:
+#             protein_ref = uniprot_list.index(protein)
+#             values = np.array(expression_data[protein])
+#             # print(protein, values.shape)
+#             expr[protein_ref] = method(values, 0)
+#     normal_ref = []
+#     intervention_ref = []
+#     for flag, samples in tqdm(sample_dict.items(), desc='separate samples'):
+#         # for flag, samples in sample_dict.items():
+#         if flag == 'normal':
+#             for sample in samples:
+#                 normal_ref.append(expression_data['id'].index(sample))
+#         elif flag == 'intervention':
+#             for sample in samples:
+#                 intervention_ref.append(expression_data['id'].index(sample))
+#
+#     normal_expr = np.zeros((nrow, 0))
+#     intervention_expr = np.zeros((nrow, 0))
+#
+#     for ref in tqdm(normal_ref, desc='normal samples expression matrix construction'):
+#         # for ref in normal_ref:
+#         sample_expr = expr[0:, ref: ref + 1]
+#         normal_expr = np.hstack((normal_expr, sample_expr))
+#     for ref in tqdm(intervention_ref, desc='intervened expression matrix construction'):
+#         # for ref in intervetion_ref:
+#         sample_expr = expr[0:, ref: ref + 1]
+#         intervention_expr = np.hstack((intervention_expr, sample_expr))
+#
+#     with tqdm(total=5, desc='co-expression correlation coefficient matrix construction') as coexpr_bar:
+#         pcc_normal = np.corrcoef(normal_expr)
+#         coexpr_bar.update()
+#         pcc_intervention = np.corrcoef(intervention_expr)
+#         coexpr_bar.update()
+#         np.fill_diagonal(pcc_normal, 0)
+#         np.fill_diagonal(pcc_intervention, 0)
+#         coexpr_bar.update()
+#
+#         pcc_normal_nan = np.isnan(pcc_normal)
+#         pcc_intervetion_nan = np.isnan(pcc_intervention)
+#         pcc_normal[pcc_normal_nan] = 0
+#         pcc_intervention[pcc_intervetion_nan] = 0
+#         pcc_nor = coo_matrix(pcc_normal)
+#         coexpr_bar.update()
+#         pcc_inter = coo_matrix(pcc_intervention)
+#         coexpr_bar.update()
+#     coexpr_bar.close()
+#
+#     return pcc_nor, pcc_inter
 
-    series = ''
-    probe_gene_dict = {}  # store probe 2 entrez gene
-    probe_expr_dict = {}  # store expression matrix
-    entrez_gene_id_list = []  # store platform probe correspond enterz gene id
 
-    not_data_flag = ['!platform_table_begin', '!sample_table_begin', 'ID_REF	VALUE']
-    col_name_flag = 'ENTREZ_GENE_ID'
-    sample_id_flag = False
-    platform_append_flag = False
-    matrix_append_flag = False
-    probe_ref = 0
-    entrez_gene_ref = 0
-    for line in tqdm(file_data, desc='Extracting expression information'):  # for line in file_data:
-        # for platform data
-        if line.startswith('^SERIES'):
-            series = line.split()[-1].strip()  # get series
-        if line.startswith('!platform_table_begin'):
-            platform_append_flag = True
-        if line.startswith('!platform_table_end'):
-            platform_append_flag = False
-        if platform_append_flag:  # get entrez gene id and correspond probe id
-            if col_name_flag in line.strip().split('\t'):
-                probe_ref = line.strip().split('\t').index('ID')
-                entrez_gene_ref = line.strip().split('\t').index('ENTREZ_GENE_ID')
-            elif line.strip() not in not_data_flag:
-                # for mapping dict
-                probe = line.split('\t')[probe_ref].strip()
-                gene_id_str = line.split('\t')[entrez_gene_ref].strip()
-                if gene_id_str:  # 存在大量的probe没有对应的entrez gene id ！！！！！！
-                    for gene_id in gene_id_str.split('///'):
-                        gene_id = gene_id.strip()
-                        if probe in probe_gene_dict:
-                            probe_gene_dict[probe].append(gene_id)
-                        else:
-                            probe_gene_dict[probe] = [gene_id, ]  # first time
-        # for expression matrix data
-        sample_id = ''
-        if line.startswith('^SAMPLE'):
-            sample_id_flag = True
-            sample_id = line.split('=')[1].strip()
-            if 'probe_id' in probe_expr_dict:
-                probe_expr_dict['probe_id'].append(sample_id)
-            else:
-                probe_expr_dict['probe_id'] = [sample_id, ]  # first time
-        if sample_id_flag:
-            if line.startswith('!sample_table_begin'):
-                matrix_append_flag = True
-            if line.startswith('!sample_table_end'):
-                matrix_append_flag = False
-                sample_id_flag = False
-            if matrix_append_flag:
-                if line.strip() not in not_data_flag:
-                    probe = line.split()[0].strip()
-                    value = float(line.split()[1].strip())
-                    if probe in probe_expr_dict:
-                        probe_expr_dict[probe].append(value)
-                    else:
-                        probe_expr_dict[probe] = [value, ]  # first time
-
-    gene_expr_dict = {}
-    gene_expr_dict['id'] = probe_expr_dict['probe_id']
-    for probe, genes in tqdm(probe_gene_dict.items(), desc='construct gene expression dict'):
-        for gene in genes:
-            if gene in gene_expr_dict:
-                gene_expr_dict[gene].append(probe_expr_dict[probe])
-            else:
-                gene_expr_dict[gene] = [probe_expr_dict[probe], ]
-            # entrez gene id list
-            entrez_gene_id_list.append(gene)
-
-    return_dict = {
-        'series': series,
-        'id_list': entrez_gene_id_list,
-        'expr_dict': gene_expr_dict
-    }
-
-    data_path = '../data/generate_materials/' + series + '_data'
-    isExists = os.path.exists(data_path)
-    if not isExists:
-        os.makedirs(data_path)
-
-    return return_dict
+# def construct_disease_comparison_gcn(data, uniprot_list, sample, file_type='soft'):
+#     expr_data, map_dict = {}, {}
+#     if file_type == 'soft':
+#         expr_data = extract_expression_data_from_soft_file(data_file=data)
+#         map_dict = id_mapping(query_list=expr_data['id_list'], original_id='P_ENTREZGENEID', target_id='ACC', direction=0, series=expr_data['series'])
+#     elif file_type == 'csv':
+#         expr_data = extract_expression_data_from_csv_file(data_file=data)
+#         map_dict = id_mapping(query_list=expr_data['id_list'], original_id='ENSEMBL_ID', target_id='ACC', direction=0, series=expr_data['series'])
+#
+#     protein_expr = construct_protein_expression_dict(expression_data=expr_data['expr_dict'], map_dict=map_dict, uniprot_list=uniprot_list, series=expr_data['series'])
+#     gcn_normal, gcn_disease = construct_co_expression_matrix(sample_dict=sample, uniprot_list=uniprot_list, expression_data=protein_expr, series=expr_data['series'], method='median')
+#
+#     return gcn_normal, gcn_disease, expr_data['series']
 
 
-def extract_expression_data_from_csv_file(data_file):
-    """
-    Extracting expression data from CSV format files
+def construct_gcn_matrix(data, sample_list, protein_list):
+    expr_set = pd.read_csv(data)
+    extract_list = ['uniprot_id']
+    extract_list.extend(sample_list)
+    expr_data = pd.DataFrame(expr_set[extract_list]).sort_values('uniprot_id')
+    # print(expr_data)
 
-    :param data_file: File path
-    :param file: Generate files
-    :return: Dictionary with series, ids and expression data
-    """
-    series = data_file.split('/')[-1].split('_')[0]
-    ensemble_id_list = []
-    expr_dict = {}
-    head_flag = True
-    with open(data_file) as csv_file:
-        data = csv.reader(csv_file)
-        for line in tqdm(data, desc='Extracting expression information'):  # for line in data:
-            ensemble_id = line[0]
-            values = line[1:]
-            if head_flag:
-                head_flag = False
-                expr_dict['id'] = values
-                continue
-            values = list(map(float, values))
-            expr_dict[ensemble_id] = values
-            ensemble_id_list.append(ensemble_id)
+    # drop mask
+    expr_protein = set(expr_data['uniprot_id'].values.tolist())
+    ppi_protein = set(protein_list)
+    and_res = expr_protein & ppi_protein
+    drop_mask = expr_protein - and_res
+    # print(len(expr_protein))
+    # print(len(ppi_protein))
+    # print(len(and_res))
+    # print(len(drop_mask))
+    # print('-'*10)
 
-    return_dict = {
-        'series': series,
-        'id_list': ensemble_id_list,
-        'expr_dict': expr_dict
-    }
+    # group by and aggrate same protein with 'mean'
+    expr_data = expr_data.groupby(expr_data['uniprot_id']).agg('mean')
+    # print(expr_data)
+    # print('-' * 10)
 
-    data_path = '../data/generate_materials/' + series + '_data'
-    isExists = os.path.exists(data_path)
-    if not isExists:
-        os.makedirs(data_path)
+    # remove data not in ppi
+    for item in expr_data.index:
+        if item in drop_mask:
+            expr_data.drop(item, inplace=True)
 
-    return return_dict
+    # add nodes
+    nums = [[0] * 3 for i in range(len(protein_list))]
+    expr_gcn = pd.DataFrame(data=nums, index=protein_list, columns=sample_list)
+    for item in expr_gcn.index:
+        if item in expr_data.index:
+            expr_gcn.loc[item] = expr_data.loc[item]
 
+    expr_gcn = expr_gcn.to_numpy()
+    expr_pcc = np.corrcoef(expr_gcn)
+    np.fill_diagonal(expr_pcc, 0)
+    pcc_nan = np.isnan(expr_pcc)
+    expr_pcc[pcc_nan] = 0
+    gcn = coo_matrix(expr_pcc)
 
-def construct_protein_expression_dict(expression_data, map_dict, uniprot_list, series):
-    protein_expr_dict = {'id': expression_data['id']}
-    for protein_id in tqdm(expression_data, desc='construct protein expression dict'):
-        if protein_id in map_dict:  # Determine if the ID is in the mapping
-            protein_list = map_dict[protein_id]  # Get the list of proteins corresponding to the ID
-            for protein in protein_list:
-                if protein in uniprot_list:  # Determine if a protein is in the set of interaction network nodes
-                    if protein not in protein_expr_dict:
-                        # protein_expr_dict[protein] = [expression_data[protein_id], ]
-                        protein_expr_dict[protein] = expression_data[protein_id]
-                    else:
-                        for item in expression_data[protein_id]:
-                            protein_expr_dict[protein].append(item)
-
-    return protein_expr_dict
-
-
-def construct_co_expression_matrix(sample_dict, uniprot_list, expression_data, series, method='median'):
-    ncol = len(expression_data['id'])
-    nrow = len(uniprot_list)
-
-    expr = np.zeros((nrow, ncol))
-    co_expr = np.zeros((nrow, nrow))
-    method = np.median if method == 'median' else eval('np.ndarray.' + method)
-
-    for protein in tqdm(uniprot_list, desc='processing protein expression matrix'):
-    # for protein in uniprot_list:
-        if protein in expression_data:
-            protein_ref = uniprot_list.index(protein)
-            values = np.array(expression_data[protein])
-            # print(protein, values.shape)
-            expr[protein_ref] = method(values, 0)
-    normal_ref = []
-    intervention_ref = []
-    for flag, samples in tqdm(sample_dict.items(), desc='separate samples'):
-        # for flag, samples in sample_dict.items():
-        if flag == 'normal':
-            for sample in samples:
-                normal_ref.append(expression_data['id'].index(sample))
-        elif flag == 'intervention':
-            for sample in samples:
-                intervention_ref.append(expression_data['id'].index(sample))
-
-    normal_expr = np.zeros((nrow, 0))
-    intervention_expr = np.zeros((nrow, 0))
-
-    for ref in tqdm(normal_ref, desc='normal samples expression matrix construction'):
-        # for ref in normal_ref:
-        sample_expr = expr[0:, ref: ref + 1]
-        normal_expr = np.hstack((normal_expr, sample_expr))
-    for ref in tqdm(intervention_ref, desc='intervened expression matrix construction'):
-        # for ref in intervetion_ref:
-        sample_expr = expr[0:, ref: ref + 1]
-        intervention_expr = np.hstack((intervention_expr, sample_expr))
-
-    with tqdm(total=5, desc='co-expression correlation coefficient matrix construction') as coexpr_bar:
-        pcc_normal = np.corrcoef(normal_expr)
-        coexpr_bar.update()
-        pcc_intervention = np.corrcoef(intervention_expr)
-        coexpr_bar.update()
-        np.fill_diagonal(pcc_normal, 0)
-        np.fill_diagonal(pcc_intervention, 0)
-        coexpr_bar.update()
-
-        pcc_normal_nan = np.isnan(pcc_normal)
-        pcc_intervetion_nan = np.isnan(pcc_intervention)
-        pcc_normal[pcc_normal_nan] = 0
-        pcc_intervention[pcc_intervetion_nan] = 0
-        pcc_nor = coo_matrix(pcc_normal)
-        coexpr_bar.update()
-        pcc_inter = coo_matrix(pcc_intervention)
-        coexpr_bar.update()
-    coexpr_bar.close()
-
-    return pcc_nor, pcc_inter
-
-
-def construct_disease_comparison_gcn(data, uniprot_list, sample, file_type='soft'):
-    expr_data, map_dict = {}, {}
-    if file_type == 'soft':
-        expr_data = extract_expression_data_from_soft_file(data_file=data)
-        map_dict = id_mapping(query_list=expr_data['id_list'], original_id='P_ENTREZGENEID', target_id='ACC', direction=0, series=expr_data['series'])
-    elif file_type == 'csv':
-        expr_data = extract_expression_data_from_csv_file(data_file=data)
-        map_dict = id_mapping(query_list=expr_data['id_list'], original_id='ENSEMBL_ID', target_id='ACC', direction=0, series=expr_data['series'])
-
-    protein_expr = construct_protein_expression_dict(expression_data=expr_data['expr_dict'], map_dict=map_dict, uniprot_list=uniprot_list, series=expr_data['series'])
-    gcn_normal, gcn_disease = construct_co_expression_matrix(sample_dict=sample, uniprot_list=uniprot_list, expression_data=protein_expr, series=expr_data['series'], method='median')
-
-    return gcn_normal, gcn_disease, expr_data['series']
+    return gcn
 
 
 def edge_clustering_coefficients(ppi_net, epsilon=0):
@@ -393,7 +444,7 @@ def edge_clustering_coefficients(ppi_net, epsilon=0):
     return ecc
 
 
-def modify_network_topology(ppi_net, pcc_nor, pcc_inter, series):
+def modify_network_topology(ppi_net, pcc_nor, pcc_inter):
     with tqdm(total=5, desc='modify protein interaction network') as mod_bar:
         ppi = ppi_net.tocsr()
         pcc_normal = pcc_nor.tocsr()
@@ -433,38 +484,38 @@ def modify_network_topology(ppi_net, pcc_nor, pcc_inter, series):
     return ppi_intervention
 
 
-def construct_matrix_of_normal_and_disease_cond(data, start, end):
+def construct_matrix_of_normal_and_intervention_cond(data, start, end):
     ppi_normal, protein_list = construct_normal_ppi(start=start, end=end)
     ecc_normal = edge_clustering_coefficients(ppi_net=ppi_normal)
+    # store
+    normal_path = '../data/generate_materials/'
+    protein_list_path = normal_path + 'protein_ppi.json'
+    if not os.path.exists(normal_path + 'PPI_normal.npz'):
+        sparse.save_npz(normal_path + 'PPI_normal', ppi_normal)
+    if not os.path.exists(normal_path + 'ECC_normal.npz'):
+        sparse.save_npz(normal_path + 'ECC_normal', ecc_normal)
+    if not Path(protein_list_path).exists():
+        with open(protein_list_path, 'w') as f:
+            json.dump(protein_list, f)
 
     for sample_data in data.values():
-        file_type = sample_data[1].split('.')[-1]
-        gcn_normal, gcn_disease, series = construct_disease_comparison_gcn(data=sample_data[1],
-                                                                           uniprot_list=protein_list,
-                                                                           sample=sample_data[2], file_type=file_type)
-        ppi_disease = modify_network_topology(ppi_net=ppi_normal, pcc_nor=gcn_normal, pcc_inter=gcn_disease,
-                                              series=series)
-        ecc_disease = edge_clustering_coefficients(ppi_net=ppi_disease)
+        gcn_normal = construct_gcn_matrix(sample_data[1], sample_data[2]['normal'], protein_list)
+        gcn_inter = construct_gcn_matrix(sample_data[1], sample_data[2]['intervention'], protein_list)
+        ppi_inter = modify_network_topology(ppi_net=ppi_normal, pcc_nor=gcn_normal, pcc_inter=gcn_inter)
+        ecc_inter = edge_clustering_coefficients(ppi_net=ppi_inter)
 
-        normal_path = '../data/generate_materials/'
-        protein_list_path = normal_path + 'protein_ppi.json'
-        if not os.path.exists(normal_path + 'PPI_normal.npz'):
-            sparse.save_npz(normal_path + 'PPI_normal', ppi_normal)
-        if not os.path.exists(normal_path + 'ECC_normal.npz'):
-            sparse.save_npz(normal_path + 'ECC_normal', ecc_normal)
         if not os.path.exists(normal_path + 'GCN_normal'):
             sparse.save_npz(normal_path + 'GCN_normal', gcn_normal)
-        if not Path(protein_list_path).exists():
-            with open(protein_list_path, 'w') as f:
-                json.dump(protein_list, f)
-
-        disease_path = '../data/generate_materials/' + series + '_data/'
-        if not os.path.exists(disease_path + 'PPI_disease.npz'):
-            sparse.save_npz(disease_path + 'PPI_disease', ppi_disease)
-        if not os.path.exists(disease_path + 'ECC_disease.npz'):
-            sparse.save_npz(disease_path + 'ECC_disease', ecc_disease)
-        if not os.path.exists(disease_path + 'GCN_disease.npz'):
-            sparse.save_npz(disease_path + 'GCN_disease', gcn_disease)
+        series = sample_data[1].split('/')[-1].split('_')[0]
+        inter_path = '../data/generate_materials/' + series + '_data/'
+        if not os.path.exists(inter_path):
+            os.makedirs(inter_path)
+        if not os.path.exists(inter_path + 'PPI_inter.npz'):
+            sparse.save_npz(inter_path + 'PPI_inter', ppi_inter)
+        if not os.path.exists(inter_path + 'ECC_inter.npz'):
+            sparse.save_npz(inter_path + 'ECC_inter', ecc_inter)
+        if not os.path.exists(inter_path + 'GCN_inter.npz'):
+            sparse.save_npz(inter_path + 'GCN_inter', gcn_inter)
 
 
 def judge_gene_onthology_line(line, go_list):
@@ -516,18 +567,18 @@ def extract_localization_data(uniprot_sprot_data='../data/support_materials/unip
     return label_list
 
 
-def generate_virtual_protein(label_list):
-    vir_label_list = []
-    for protein, locs in label_list:
-        if len(locs) > 1:
-            for flag in range(len(locs)):
-                vir_protein = protein + '_' + str(flag)
-                loc = locs[flag]
-                vir_label_list.append((vir_protein, [loc, ]))
-        else:
-            vir_label_list.append((protein, locs))
-
-    return vir_label_list
+# def generate_virtual_protein(label_list):
+#     vir_label_list = []
+#     for protein, locs in label_list:
+#         if len(locs) > 1:
+#             for flag in range(len(locs)):
+#                 vir_protein = protein + '_' + str(flag)
+#                 loc = locs[flag]
+#                 vir_label_list.append((vir_protein, [loc, ]))
+#         else:
+#             vir_label_list.append((protein, locs))
+#
+#     return vir_label_list
 
 
 def construct_protein_loc_matrix(label_list):
@@ -585,86 +636,86 @@ def construct_loc_matrix():
     #     json.dump(vir_label_list, f)
 
 
-def construct_graph_data(ppi, gcn, label, vir_label):
-    interaction_idx = list(zip(ppi.row, ppi.col))
-    protein = list(list(zip(*label))[0])
-    vir_labal = list(list(zip(*vir_label))[0])
-    interaction = set()
-    gcn = gcn.toarray()
-
-    for item in tqdm(interaction_idx, desc='add virtual protein'):
-        uni_a = protein[item[0]]
-        uni_b = protein[item[1]]
-        loc_a = label[item[0]][1]
-        loc_b = label[item[1]][1]
-        expr_row = protein.index(uni_a)
-        expr_col = protein.index(uni_b)
-        expr_data = gcn[expr_row][expr_col]
-
-        loc_a_flag = True if len(loc_a) > 1 else False
-        loc_b_flag = True if len(loc_b) > 1 else False
-
-        if loc_a_flag and loc_b_flag:
-            for i in range(len(loc_a)):
-                for j in range(len(loc_b)):
-                    a = uni_a + '_' + str(i)
-                    b = uni_b + '_' + str(j)
-                    a_idx = vir_labal.index(a)
-                    b_idx = vir_labal.index(b)
-                    inter = (a_idx, b_idx, expr_data)
-                    interaction.add(inter)
-
-        elif loc_a_flag or loc_b_flag:
-            if loc_a_flag:
-                for i in range(len(loc_a)):
-                    a = uni_a + '_' + str(i)
-                    b = uni_b
-                    a_idx = vir_labal.index(a)
-                    b_idx = vir_labal.index(b)
-                    inter = (a_idx, b_idx, expr_data)
-                    interaction.add(inter)
-
-            elif loc_b_flag:
-                for j in range(len(loc_b)):
-                    a = uni_a
-                    b = uni_b + '_' + str(j)
-                    a_idx = vir_labal.index(a)
-                    b_idx = vir_labal.index(b)
-                    inter = (a_idx, b_idx, expr_data)
-                    interaction.add(inter)
-
-        else:
-            a = uni_a
-            b = uni_b
-            a_idx = vir_labal.index(a)
-            b_idx = vir_labal.index(b)
-            inter = (a_idx, b_idx, expr_data)
-            interaction.add(inter)
-
-    ppi_row = []
-    ppi_col = []
-    ppi_data = []
-    gcn_row = []
-    gcn_col = []
-    gcn_data = []
-    for item in tqdm(interaction, desc='construct ppi matrix and gcn matrix'):
-        ppi_row.append(item[0])
-        ppi_col.append(item[1])
-        ppi_data.append(1)
-        gcn_row.append(item[0])
-        gcn_col.append(item[1])
-        gcn_data.append(item[2])
-
-    ppi_mat = coo_matrix((ppi_data, (ppi_col, ppi_row)), shape=(len(vir_labal), len(vir_labal)))
-    gcn_mat = coo_matrix((gcn_data, (gcn_row, gcn_col)), shape=(len(vir_labal), len(vir_labal)))
-    ppi_mat.setdiag(0)
-    gcn_mat.setdiag(0)
-    ppi_mat.eliminate_zeros()
-    gcn_mat.eliminate_zeros()
-
-    ecc_mat = edge_clustering_coefficients(ppi_mat)
-
-    return ppi_mat, ecc_mat, gcn_mat
+# def construct_graph_data(ppi, gcn, label, vir_label):
+#     interaction_idx = list(zip(ppi.row, ppi.col))
+#     protein = list(list(zip(*label))[0])
+#     vir_labal = list(list(zip(*vir_label))[0])
+#     interaction = set()
+#     gcn = gcn.toarray()
+#
+#     for item in tqdm(interaction_idx, desc='add virtual protein'):
+#         uni_a = protein[item[0]]
+#         uni_b = protein[item[1]]
+#         loc_a = label[item[0]][1]
+#         loc_b = label[item[1]][1]
+#         expr_row = protein.index(uni_a)
+#         expr_col = protein.index(uni_b)
+#         expr_data = gcn[expr_row][expr_col]
+#
+#         loc_a_flag = True if len(loc_a) > 1 else False
+#         loc_b_flag = True if len(loc_b) > 1 else False
+#
+#         if loc_a_flag and loc_b_flag:
+#             for i in range(len(loc_a)):
+#                 for j in range(len(loc_b)):
+#                     a = uni_a + '_' + str(i)
+#                     b = uni_b + '_' + str(j)
+#                     a_idx = vir_labal.index(a)
+#                     b_idx = vir_labal.index(b)
+#                     inter = (a_idx, b_idx, expr_data)
+#                     interaction.add(inter)
+#
+#         elif loc_a_flag or loc_b_flag:
+#             if loc_a_flag:
+#                 for i in range(len(loc_a)):
+#                     a = uni_a + '_' + str(i)
+#                     b = uni_b
+#                     a_idx = vir_labal.index(a)
+#                     b_idx = vir_labal.index(b)
+#                     inter = (a_idx, b_idx, expr_data)
+#                     interaction.add(inter)
+#
+#             elif loc_b_flag:
+#                 for j in range(len(loc_b)):
+#                     a = uni_a
+#                     b = uni_b + '_' + str(j)
+#                     a_idx = vir_labal.index(a)
+#                     b_idx = vir_labal.index(b)
+#                     inter = (a_idx, b_idx, expr_data)
+#                     interaction.add(inter)
+#
+#         else:
+#             a = uni_a
+#             b = uni_b
+#             a_idx = vir_labal.index(a)
+#             b_idx = vir_labal.index(b)
+#             inter = (a_idx, b_idx, expr_data)
+#             interaction.add(inter)
+#
+#     ppi_row = []
+#     ppi_col = []
+#     ppi_data = []
+#     gcn_row = []
+#     gcn_col = []
+#     gcn_data = []
+#     for item in tqdm(interaction, desc='construct ppi matrix and gcn matrix'):
+#         ppi_row.append(item[0])
+#         ppi_col.append(item[1])
+#         ppi_data.append(1)
+#         gcn_row.append(item[0])
+#         gcn_col.append(item[1])
+#         gcn_data.append(item[2])
+#
+#     ppi_mat = coo_matrix((ppi_data, (ppi_col, ppi_row)), shape=(len(vir_labal), len(vir_labal)))
+#     gcn_mat = coo_matrix((gcn_data, (gcn_row, gcn_col)), shape=(len(vir_labal), len(vir_labal)))
+#     ppi_mat.setdiag(0)
+#     gcn_mat.setdiag(0)
+#     ppi_mat.eliminate_zeros()
+#     gcn_mat.eliminate_zeros()
+#
+#     ecc_mat = edge_clustering_coefficients(ppi_mat)
+#
+#     return ppi_mat, ecc_mat, gcn_mat
 
 
 def extract_data_with_position(label_list):
@@ -682,22 +733,23 @@ def extract_data_with_position(label_list):
 if __name__ == '__main__':
     data_dict = {
         1: {
-            1: '../data/support_materials/GSE31118_family.soft',
+            1: '../data/support_materials/GSE30931_exprSet.csv',
             2: {
-                'normal': ['GSM770571', 'GSM770572', 'GSM770574'],
-                'intervention': ['GSM770586', 'GSM770589', 'GSM770591']
+                'normal': ['GSM766676', 'GSM766677', 'GSM766678'],
+                'intervention': ['GSM766682', 'GSM766683', 'GSM766684']
             }
         },
     }
-    construct_matrix_of_normal_and_disease_cond(data_dict, 5000, 15000)
-    construct_loc_matrix()
+    # construct_matrix_of_normal_and_intervention_cond(data_dict, 0, 0)
+    # construct_loc_matrix()
 
-    ppi = sparse.load_npz('../data/generate_materials/PPI_normal.npz')
-    ecc = sparse.load_npz('../data/generate_materials/ECC_normal.npz')
-    gcn = sparse.load_npz('../data/generate_materials/GCN_normal.npz')
-    print(ppi.shape, ecc.shape, gcn.shape)
+    # check
+    # ppi = sparse.load_npz('../data/generate_materials/PPI_normal.npz')
+    # ecc = sparse.load_npz('../data/generate_materials/ECC_normal.npz')
+    # gcn = sparse.load_npz('../data/generate_materials/GCN_normal.npz')
+    # print(ppi.shape, ecc.shape, gcn.shape)
 
-
+    # other
     loc_mat = sparse.load_npz('../data/generate_materials/loc_matrix.npz').toarray()
     with open('../data/generate_materials/label_with_loc_list.json') as f:
         idx = json.load(f)
