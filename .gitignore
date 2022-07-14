@@ -1,8 +1,20 @@
+# folder
 /data
-/__pycache__
+/20220708
 /.idea
 /code/__pycache__
+# file
+/code/.Rhistory
 /.gitingore
-/code/test
 /.DS_Store
-/code-singleclass
+/code/compare.py
+/code/figure.py
+/code/gephi.csv
+/code/gephi_data.py
+/code/heatmap.R
+/code/count.py
+/code/train-bp.py
+/code/validation.py
+/code/validationbp.py
+/add.npz
+/rmv.npz
