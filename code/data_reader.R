@@ -46,3 +46,4 @@ df$group = group_list
 png(filename = "../data/support_materials/GSE30931_PCA.png")
 autoplot(prcomp(df[,1:(ncol(df)-1)]), data=df, colour='group')
 dev.off()
+

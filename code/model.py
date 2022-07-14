@@ -1,3 +1,6 @@
+'''
+Model
+'''
 import torch
 import torch as th
 import torch.nn as nn
@@ -25,17 +28,13 @@ class GNN12(nn.Module):
         super(GNN12, self).__init__()
         self.conv1 = SAGEConv(in_feats, h1_feats, 'pool')
         self.liner1 = nn.Linear(h1_feats, h2_feats)
-        self.drop1 = nn.Dropout(p=dropout)
         self.liner2 = nn.Linear(h2_feats, num_classes)
 
     def forward(self, g, in_feat):
         h = self.conv1(g, in_feat)
         h = F.leaky_relu(h)
-        # h = F.relu(h)
         h = self.liner1(h)
         h = F.leaky_relu(h)
-        # h = F.relu(h)
-        h = self.drop1(h)
         h = self.liner2(h)
         h = th.sigmoid(h)
 
@@ -67,6 +66,7 @@ class GNN22(nn.Module):
         self.conv2 = SAGEConv(h1_feats, h2_feats, 'pool')
         self.liner1 = nn.Linear(h2_feats, h3_feats)
         self.liner2 = nn.Linear(h3_feats, num_classes)
+        self.drop1 = nn.Dropout(p=dropout)
 
     def forward(self, g, in_feat):
         h = self.conv1(g, in_feat)
