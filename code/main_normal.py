@@ -14,7 +14,6 @@ if __name__ == '__main__':
     parser.add_argument('-f', type=int, default=10, metavar='fold num')
     parser.add_argument('-e', type=int, default=200, metavar='epoch num')
     parser.add_argument('-a', nargs='*', default=[0.1], metavar='alpha list')
-    parser.add_argument('-b', type=float, default=1, metavar='beta')
     parser.add_argument('-d', type=str, default='cuda', metavar='device')
     args = parser.parse_args()
 
@@ -26,8 +25,9 @@ if __name__ == '__main__':
     fold_num = args.f
     epoch_num = args.e
     alpha_list = list(map(float, args.a))
-    beta = args.b
     device = args.d
+
+    beta = 1  # The parameter has been deprecated
 
     log_path = '../data/log/normal_b' + str(int(beta * 10)) + '/'
     if not os.path.exists(log_path):
