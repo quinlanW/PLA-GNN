@@ -80,3 +80,4 @@ PLA-GNN: Systematic identification of protein localization alterations in breast
 |       α [-a]        | list  |  [0.1]  | α, set as 0.1 can get the best performance of AIM and mlACC. Support input list for comparison between different α (eg. [-lr 0.1 0.2 0.3]). |
 |     device [-d]     |  str  | 'cuda'  | Support CPU or GPU to run programs, the default value is recommended. |
 
+> The command `python main_normal.py -h` or `python main_inter.py -h` can be used to display a brief description of the parameters.
