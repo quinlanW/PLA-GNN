@@ -72,14 +72,10 @@ def multi_loss(input, target, i_weight):
     for i in range(len(i_weight)):
         scl_input = input[:, i]
         scl_target = target[:, i]
-        ## scl_loss = (scl_target * torch.log(scl_input) * i_weight[i] + (1 - scl_target) * torch.log(1 - scl_input)) / (i_weight[i] + 1) * 2
         scl_loss = (scl_target * torch.log(torch.clamp(scl_input, 1e-9, 10.)) * i_weight[i] + (1 - scl_target) * torch.log(torch.clamp(1 - scl_input, 1e-9, 10.))) / (i_weight[i] + 1) * 2
-        # scl_loss = scl_target * torch.log(torch.clamp(scl_input, 1e-9, 10.)) + (1 - scl_target) * torch.log(torch.clamp(1 - scl_input, 1e-9, 10.))
-        # scl_loss = (scl_target * torch.log(torch.clamp(scl_input, 1e-6, 10.)) * i_weight[i] * ((1 - scl_input) ** 2) + (1 - scl_target) * torch.log(torch.clamp(1 - scl_input, 1e-6, 10.)) * ((1 - scl_input) ** 2)) / (i_weight[i] + 1) * 2
-        # scl_loss = scl_target * torch.log(torch.clamp(scl_input, 1e-6, 10.))
         scl_loss = -scl_loss.sum() / len(input)
         loss += scl_loss
-    loss = loss # / len(i_weight)
+    loss = loss
 
     return loss
 
@@ -90,13 +86,7 @@ def weight_cal(loc_mat, beta):
     for line in loc_mat:  # count num with label
         if line.sum():  # if loc
             sample_num += 1
-    # weight between classes
-    # b_weight = sample_num / (class_num * 12)
-    # b_weight = class_num.sum() / (class_num * 12)
-    # b_weight = np.array([1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1])  # 目前看来没有类间权重效果更好
-    # weight inner classes
-    i_weight = ((sample_num - class_num) / class_num)#  * beta
-    # print(i_weight)
+    i_weight = ((sample_num - class_num) / class_num)
 
     return i_weight
 
@@ -110,11 +100,8 @@ def train(g, lr, fold_num, epoch_num, alpha_list, beta, device, path, seed):
 
     # weight
     loc_mat = load_npz('../data/generate_materials/loc_matrix.npz').toarray()
-    # loc_mat = load_npz('../data/generate_materials/loc_matrix_new.npz').toarray()
     i_weight = weight_cal(loc_mat, beta)
 
-    # loading files (for label and mask)
-    # with open('../data/generate_materials/label_with_loc_list_new.json') as f:
     with open('../data/generate_materials/label_with_loc_list.json') as f:
         label = json.load(f)
 
@@ -136,13 +123,8 @@ def train(g, lr, fold_num, epoch_num, alpha_list, beta, device, path, seed):
         fold_use = 0
 
         for train_idx, val_idx in kfold.split(label):
-            # model = GNN11(g.ndata['feat'].shape[1], 3000, 12, dropout=0.1).to(device)
-            # model = GNN12(g.ndata['feat'].shape[1], 300, 100, 12, dropout=0.5).to(device)
-            # model = GNN21(g.ndata['feat'].shape[1], 3000, 500, 12, dropout=0.1).to(device)
-            # model = GNN22(g.ndata['feat'].shape[1], 400, 200, 80, 12).to(device)
-            # model = GNN31(g.ndata['feat'].shape[1], 3000, 1500, 500, 12).to(device)
             model = GNN32(g.ndata['feat'].shape[1], 400, 300, 200, 100, 12).to(device)
-            optimizer = torch.optim.Adam(model.parameters(), lr=lr) #, weight_decay=1e-6)  # 1e-5 nice
+            optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
             # index conversion
             train_index = []
@@ -180,10 +162,8 @@ def train(g, lr, fold_num, epoch_num, alpha_list, beta, device, path, seed):
                 val_aim, val_cov, val_acc, val_atr, val_afr = proformances_record(labels[val_index], pred[val_index])
 
                 # record
-                # print(type(train_loss.item()), type(val_loss.item())
-                #       , type(train_aim), type(train_cov), type(train_acc), type(train_atr), type(train_afr)
-                #       , type(val_aim), type(val_cov), type(val_acc), type(val_atr), type(val_afr))
-                train_loss_list.append(train_loss.item())  # .clone().detach().cpu().
+
+                train_loss_list.append(train_loss.item())
                 val_loss_list.append(val_loss.item())
 
                 train_aim_list.append(train_aim)
@@ -206,8 +186,6 @@ def train(g, lr, fold_num, epoch_num, alpha_list, beta, device, path, seed):
                           .format(train_aim, train_cov, train_acc, train_atr, train_afr, train_loss))
                     print('val -- aim: {:.3f}, cov: {:.3f}, acc: {:.3f}, atr: {:.3f}, afr: {:.3f}, loss: {:.8f}'
                           .format(val_aim, val_cov, val_acc, val_atr, val_afr, val_loss))
-                    # print(logits)
-                    # print(logits.clone().detach().float().cpu().numpy())
                     p_pred = pred.cpu().detach().numpy().astype(int)
                     p_pred_num = p_pred.sum(0)
                     p_pred_scale = p_pred_num / len(p_pred) * 100
@@ -237,7 +215,7 @@ def train(g, lr, fold_num, epoch_num, alpha_list, beta, device, path, seed):
                             f.write('\n')
                             f.write(
                                 'learning rate:{:.8f}, fold num:{}, epoch num:{}, alpha:{}, device:{}\n'
-                                .format(lr, fold_num, epoch_num, alpha, device))
+                                .format(lr, fold_flag, epoch_num, alpha, device))
                             f.write(tplt.format(p_label_scale[0], p_label_num[0], p_label_scale[1], p_label_num[1],
                                                 p_label_scale[2], p_label_num[2], p_label_scale[3], p_label_num[3],
                                                 p_label_scale[4], p_label_num[4], p_label_scale[5], p_label_num[5],

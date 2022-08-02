@@ -67,26 +67,26 @@ def misloc_protein_record(normal_mat, inter_mat, threshold=100):
 
     loc_mat = load_npz('../data/generate_materials/loc_matrix.npz').toarray()
 
-    # ### labeled
-    # with open('../data/log/loc_change_record(with labels).csv', 'a') as f:
-    #     writer = csv.writer(f, delimiter=',')
-    #     writer.writerow(["Protein", "Score", "Altered localization", "Original localization"])
-    #     for indice in diff_indices:
-    #         row, col = indice // len(loc_list), indice % len(loc_list)
-    #         if loc_mat[row].sum() != 0 and diff_matrix[row][col] != -1.0:
-    #             location = loc_map[loc_list[col]]
-    #             ori_loc_idx = np.where(loc_mat[row] == 1)[0]
-    #             ori_loc = ','.join([loc_map[i] for i in ori_loc_idx])
-    #             score = diff_matrix[row][col]
-    #             if score > 0 and location not in ori_loc:  # add loc
-    #                 protein = protein_list[row]
-    #                 writer.writerow([protein, score, location, ori_loc])
-    #                 # res_labeled[protein] = [np.float64(score), location, ori_loc]
-    #             if score < 0 and location in ori_loc:  # remove loc
-    #                 protein = protein_list[row]
-    #                 writer.writerow([protein, score, location, ori_loc])
-    #                 # res_labeled[protein] = [np.float64(score), location, ori_loc]
-    #
+    ### labeled
+    with open('../data/log/loc_change_record(labeled).csv', 'a') as f:
+        writer = csv.writer(f, delimiter=',')
+        writer.writerow(["Protein", "Score", "Altered localization", "Original localization"])
+        for indice in diff_indices:
+            row, col = indice // len(loc_list), indice % len(loc_list)
+            if loc_mat[row].sum() != 0 and diff_matrix[row][col] != -1.0:
+                location = loc_map[loc_list[col]]
+                ori_loc_idx = np.where(loc_mat[row] == 1)[0]
+                ori_loc = ','.join([loc_map[i] for i in ori_loc_idx])
+                score = diff_matrix[row][col]
+                if score > 0 and location not in ori_loc:  # add loc
+                    protein = protein_list[row]
+                    writer.writerow([protein, score, location, ori_loc])
+                    # res_labeled[protein] = [np.float64(score), location, ori_loc]
+                if score < 0 and location in ori_loc:  # remove loc
+                    protein = protein_list[row]
+                    writer.writerow([protein, score, location, ori_loc])
+                    # res_labeled[protein] = [np.float64(score), location, ori_loc]
+
     # res_labeled = {}
     # rank = 1
     # for indice in diff_indices:

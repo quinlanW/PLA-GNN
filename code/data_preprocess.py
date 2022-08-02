@@ -79,8 +79,8 @@ def construct_uniprot_ppi(uniprot_list, interaction_list):
         flag += 1
 
     for interaction in tqdm(interaction_list, desc='record coordinates'):
-        uni_1 = idx_map[interaction[0]]#uniprot_list.index(interaction[0])  # row
-        uni_2 = idx_map[interaction[1]]#uniprot_list.index(interaction[1])  # col
+        uni_1 = idx_map[interaction[0]]
+        uni_2 = idx_map[interaction[1]]
         node_set.add((uni_1, uni_2))
         node_set.add((uni_2, uni_1))
 
@@ -113,23 +113,15 @@ def construct_gcn_matrix(data, sample_list, protein_list):
     extract_list = ['uniprot_id']
     extract_list.extend(sample_list)
     expr_data = pd.DataFrame(expr_set[extract_list]).sort_values('uniprot_id')
-    # print(expr_data)
 
     # drop mask
     expr_protein = set(expr_data['uniprot_id'].values.tolist())
     ppi_protein = set(protein_list)
     and_res = expr_protein & ppi_protein
     drop_mask = expr_protein - and_res
-    # print(len(expr_protein))
-    # print(len(ppi_protein))
-    # print(len(and_res))
-    # print(len(drop_mask))
-    # print('-'*10)
 
     # group by and aggrate same protein with 'mean'
     expr_data = expr_data.groupby(expr_data['uniprot_id']).agg('mean')
-    # print(expr_data)
-    # print('-' * 10)
 
     # remove data not in ppi
     for item in expr_data.index:
@@ -209,25 +201,10 @@ def modify_network_topology(ppi_net, pcc_nor, pcc_inter):
         mod_bar.update()
         # modify topology
         res1 = np.logical_and(diff_matrix < l_threshold, ppi_intervention == 1).A
-        # print(res1.any())
-        # res_rmv = coo_matrix(res1.astype(int))
-        # scipy.sparse.save_npz('../rmv', res_rmv)
-        # print(res1.astype(int).sum(), '< and 1')
-        # print((diff_matrix < l_threshold).astype(int).sum(), '<')
-        # print((ppi_intervention == 1).astype(int).sum(), '1')
         res2 = np.logical_and(diff_matrix > r_threshold, ppi_intervention == 0).A
-        # print(res2.any())
-        # res_add = coo_matrix(res2.astype(int))
-        # scipy.sparse.save_npz('../add', res_add)
-        # print(res2.astype(int).sum(), '> and 0')
-        # print((diff_matrix > r_threshold).astype(int).sum(), '>')
-        # print((ppi_intervention == 0).astype(int).sum(), '0')
 
         ppi_intervention[res1] = 0
         ppi_intervention[res2] = 1
-        # res1 = diff_matrix < l_threshold
-        # res2 = ppi_intervention == 1
-        # print(res1.any(), res2.any())
 
         ppi_intervention = coo_matrix(ppi_intervention)
         mod_bar.update()
@@ -402,90 +379,6 @@ def construct_loc_matrix():
         json.dump(label_list, f)
 
 
-
-
-# def construct_graph_data(ppi, gcn, label, vir_label):
-#     interaction_idx = list(zip(ppi.row, ppi.col))
-#     protein = list(list(zip(*label))[0])
-#     vir_labal = list(list(zip(*vir_label))[0])
-#     interaction = set()
-#     gcn = gcn.toarray()
-#
-#     for item in tqdm(interaction_idx, desc='add virtual protein'):
-#         uni_a = protein[item[0]]
-#         uni_b = protein[item[1]]
-#         loc_a = label[item[0]][1]
-#         loc_b = label[item[1]][1]
-#         expr_row = protein.index(uni_a)
-#         expr_col = protein.index(uni_b)
-#         expr_data = gcn[expr_row][expr_col]
-#
-#         loc_a_flag = True if len(loc_a) > 1 else False
-#         loc_b_flag = True if len(loc_b) > 1 else False
-#
-#         if loc_a_flag and loc_b_flag:
-#             for i in range(len(loc_a)):
-#                 for j in range(len(loc_b)):
-#                     a = uni_a + '_' + str(i)
-#                     b = uni_b + '_' + str(j)
-#                     a_idx = vir_labal.index(a)
-#                     b_idx = vir_labal.index(b)
-#                     inter = (a_idx, b_idx, expr_data)
-#                     interaction.add(inter)
-#
-#         elif loc_a_flag or loc_b_flag:
-#             if loc_a_flag:
-#                 for i in range(len(loc_a)):
-#                     a = uni_a + '_' + str(i)
-#                     b = uni_b
-#                     a_idx = vir_labal.index(a)
-#                     b_idx = vir_labal.index(b)
-#                     inter = (a_idx, b_idx, expr_data)
-#                     interaction.add(inter)
-#
-#             elif loc_b_flag:
-#                 for j in range(len(loc_b)):
-#                     a = uni_a
-#                     b = uni_b + '_' + str(j)
-#                     a_idx = vir_labal.index(a)
-#                     b_idx = vir_labal.index(b)
-#                     inter = (a_idx, b_idx, expr_data)
-#                     interaction.add(inter)
-#
-#         else:
-#             a = uni_a
-#             b = uni_b
-#             a_idx = vir_labal.index(a)
-#             b_idx = vir_labal.index(b)
-#             inter = (a_idx, b_idx, expr_data)
-#             interaction.add(inter)
-#
-#     ppi_row = []
-#     ppi_col = []
-#     ppi_data = []
-#     gcn_row = []
-#     gcn_col = []
-#     gcn_data = []
-#     for item in tqdm(interaction, desc='construct ppi matrix and gcn matrix'):
-#         ppi_row.append(item[0])
-#         ppi_col.append(item[1])
-#         ppi_data.append(1)
-#         gcn_row.append(item[0])
-#         gcn_col.append(item[1])
-#         gcn_data.append(item[2])
-#
-#     ppi_mat = coo_matrix((ppi_data, (ppi_col, ppi_row)), shape=(len(vir_labal), len(vir_labal)))
-#     gcn_mat = coo_matrix((gcn_data, (gcn_row, gcn_col)), shape=(len(vir_labal), len(vir_labal)))
-#     ppi_mat.setdiag(0)
-#     gcn_mat.setdiag(0)
-#     ppi_mat.eliminate_zeros()
-#     gcn_mat.eliminate_zeros()
-#
-#     ecc_mat = edge_clustering_coefficients(ppi_mat)
-#
-#     return ppi_mat, ecc_mat, gcn_mat
-
-
 def extract_data_with_position(label_list):
     uni_list, loc_list = zip(*label_list)
     uni_idx = []
@@ -512,11 +405,6 @@ if __name__ == '__main__':
     construct_matrix_of_normal_and_intervention_cond(data_dict)
     construct_loc_matrix()
 
-    # # check
-    # ppi = sparse.load_npz('../data/generate_materials/PPI_normal.npz')
-    # ecc = sparse.load_npz('../data/generate_materials/ECC_normal.npz')
-    # gcn = sparse.load_npz('../data/generate_materials/GCN_normal.npz')
-    # print(ppi.shape, ecc.shape, gcn.shape)
 
 
 

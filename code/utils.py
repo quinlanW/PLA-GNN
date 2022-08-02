@@ -43,71 +43,7 @@ def pca(mat, components):
     return new_node_feat
 
 
-def smote(loc, ppi, scale=0.7):
-    # determine class thresholds
-    loc_mat = loc.toarray()
-    loc_sum = loc_mat.sum(axis=0).astype(int)
-    print('loc sum:\t', loc_sum)
-    large_threshold = loc_sum.max() - 0.4 * (loc_sum.max() - loc_sum.min())
-    minor_threshold = loc_sum.min() + 0.1 * (loc_sum.max() - loc_sum.min())
-    print('large threshold:\t', large_threshold)
-    print('minor threshold:\t', minor_threshold)
-    large_mask = [1 if i > large_threshold else 0 for i in loc_sum]
-    minor_mask = [1 if i < minor_threshold else 0 for i in loc_sum]
-    print('large mask:\t', large_mask)
-    print('minor mask:\t', minor_mask)
-    # statistical major and minor classes (store index)
-    minor = []
-    large = []
-    both = []
-    for locs_idx in range(len(loc_mat)):
-        locs = loc_mat[locs_idx]
-        if locs.sum() == 0:
-            continue
-        minor_res = np.logical_and(locs, minor_mask).astype(int)
-        large_res = np.logical_and(locs, large_mask).astype(int)
-        if minor_res.sum() != 0 and large_res.sum() != 0:
-            both.append(locs_idx)
-        else:
-            if minor_res.sum() != 0:
-                minor.append(locs_idx)
-            if large_res.sum() != 0:
-                large.append(locs_idx)
-    # determine generate and remove nodes num
-    intermediate_mask = np.logical_not(np.logical_or(large_mask, minor_mask)).astype(int).tolist()  # nor_num class mask
-    intermediate = [loc_sum[i] if intermediate_mask[i] else None for i in range(len(loc_sum))]  # nor_num class number
-    intermediate = list(filter(None, intermediate))
-    inter_mean = int(np.mean(intermediate))
-    print('inter mean:\t', inter_mean)
-    large_num = [int(scale * (loc_sum[i] - inter_mean)) if large_mask[i] else 0 for i in range(len(loc_sum))]
-    minor_num = [int(scale * (inter_mean - loc_sum[i])) if minor_mask[i] else 0 for i in range(len(loc_sum))]
-    print('large num:\t', large_num)
-    print('minor num:\t', minor_num)
-    # remove large class nodes
-    loc_new = loc.toarray()
-    for col_idx in range(len(large_num)):
-        if large_num[col_idx]:
-            col = loc_new[:, col_idx:col_idx+1]
-            row_idx = np.where(col == 1)[0].tolist()
-            remove_idx = random.sample(row_idx, large_num[col_idx])
-            loc_new[remove_idx, col_idx] = 0
-    new_loc_sum = loc_new.sum(axis=0).astype(int)
-
-    with_label = np.where(loc_new.any(axis=1))[0].tolist()
-    with open('../data/generate_materials/label_with_loc_list_new.json', 'w') as f:
-        json.dump(with_label, f)
-
-    print('new loc sum:\t', new_loc_sum)
-    loc_new = coo_matrix(loc_new)
-    save_npz('../data/generate_materials/loc_matrix_new.npz', loc_new)
-
 if __name__ == '__main__':
-    # delete node
-    # ppi = load_npz('../data/generate_materials/PPI_normal.npz')
-    # loc = load_npz('../data/generate_materials/loc_matrix.npz')
-    # smote(loc, ppi)
-
-
     # PCA
     ppi = load_npz('../data/generate_materials/PPI_normal.npz')
     gcn = load_npz('../data/generate_materials/GCN_normal.npz').tocsr().multiply(ppi.tocsr()).toarray()

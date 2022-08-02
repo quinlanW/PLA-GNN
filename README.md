@@ -57,6 +57,7 @@ PLA-GNN: Systematic identification of protein localization alterations in breast
 
 1. Run the R script `data_reader.R`
 2. Run `python data_preprocess.py` in the terminal
-3. Run `python main_normal.py` in the terminal
-4. Run `python main_inter.py` in the terminal
-5. Run `python main.py` in the terminal
+3. Run `utils.py` in the terminal
+4. Run `python main_normal.py` in the terminal
+5. Run `python main_inter.py` in the terminal
+6. Run `python main.py` in the terminal
