@@ -1,47 +1,109 @@
 # PLA-GNN
 
-PLA-GNN: Systematic identification of protein localization alterations in breast cancer cells under Bortezomib perturbation with deep graph neural networks
+> PLA-GNN: Systematic identification of protein localization alterations in breast cancer cells under Bortezomib perturbation with deep graph neural networks
+
+In this work, we used PLA-GNN (**P**rotein **L**ocalization **A**lterations by **G**raph **N**eural **N**etwork) to identify alterations of  protein localizations in the drug perturbation state. We took the **Bortezomib** and **breast cancer** cell as instances for this study.
 
 ---
 
-## 1.Requirements
+## 1 Requirements
 
-+ CUDA == 11.0.2
-+ python == 3.8
-+ pytorch == 1.7.0
-+ torchvision == 0.8.0
-+ torchaudio == 0.7.0
-+ cudatoolkit ==11.0
-+ dgl_cu110 == 0.6.0
+### 1.1 R
+
+|    Requirements    | Release |
+| :----------------: | :-----: |
+|         R          |   3.6   |
+|      reshape2      |  1.4.4  |
+| illuminaHumanv4.db | 1.26.0  |
+|       dplyr        |  1.0.9  |
+
+### 1.2 Python
+
+| Requirements |   Release    |
+| :----------: | :----------: |
+|     CUDA     |     11.6     |
+|    Python    |    3.8.10    |
+|    torch     | 1.10.0+cu113 |
+|  dgl_cu113   | 0.8.2.post1  |
+|    numpy     |    1.21.4    |
+|    pandas    |    1.4.3     |
+| scikit-learn |    1.1.1     |
+|    spicy     |    1.8.1     |
+|  matplotlib  |    3.5.0     |
+|     tqdm     |    4.61.2    |
 
 ---
 
-## 2.Project Catalog Structure
+## 2 Project Catalog Structure
 
 > code
 >
-> > ```
-> > Store project code
-> > ```
+> > + data_reader.R
+> >
+> >   ```
+> >   Convert gene expression data to CSV file from GEO downloads.
+> >   ```
+> >
+> > + data_preprocess.py
+> >
+> >   ```
+> >   Generate multi-conditional PPI, ECC, PCC sparse matrix files and some related ancillary files.
+> >   ```
+> >
+> > + utils.py
+> >
+> >   ```
+> >   Include building graph, data normalization and other code.
+> >   ```
+> >
+> > + model.py
+> >
+> >   ```
+> >   Include graph neural network model code.
+> >   ```
+> >
+> > + train.py
+> >
+> >   ```
+> >   Model training and data storage related code.
+> >   ```
+> >
+> > + main_normal.py
+> >
+> >   ```
+> >   Prediction code for protein location score in control state.
+> >   ```
+> >
+> > + main_inter.py
+> >
+> >   ```
+> >   Prediction code for protein localization score in Bortezomib perturbation state.
+> >   ```
+> >
+> > + main.py
+> >
+> >   ```
+> >   Discovery of potentially mis-localized proteins in Bortezomib perturbation.
+> >   ```
 >
 > data 
 >
 > >generate_materials (need to create on your own)
 > >
 > >> ```
-> >> Store generated large files
+> >> Store the files generated during program execution for subsequent use. The files in this folder will be generated continuously during the program runtime.
 > >> ```
 > >
 > >support_materials
 > >
 > >> ```
-> >> Store project-dependent data files
+> >> Store project-dependent data files. The files in this folder need to be downloaded and placed in the correct path by yourself before the program running. A more detailed description of the file download will be presented in Section 3.
 > >> ```
 > >
 > >log (need to create on your own)
 > >
 > >> ```
-> >> Store generated results
+> >> Store program execution results.
 > >> ```
 
 ---

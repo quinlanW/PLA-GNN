@@ -12,16 +12,16 @@ colnames(exprSet_L) = c('probe', 'sample', 'value')
 exprSet_L$group = rep(group_list, each=nrow(exprSet))
 head(exprSet_L)
 
-library(ggplot2)
-p = ggplot(exprSet_L, aes(x=sample, y=value, fill=group)) + geom_boxplot() + theme(axis.text.x = element_text(angle = 45, hjust = 0.5, vjust = 0.5))
-print(p)
-ggsave(
-  filename = "../data/support_materials/GSE30931_boxPlot.png",
-  width = 10,
-  height = 10,
-  units = 'in',
-  dpi = 500
-)
+# library(ggplot2)
+# p = ggplot(exprSet_L, aes(x=sample, y=value, fill=group)) + geom_boxplot() + theme(axis.text.x = element_text(angle = 45, hjust = 0.5, vjust = 0.5))
+# print(p)
+# ggsave(
+#   filename = "../data/support_materials/GSE30931_boxPlot.png",
+#   width = 10,
+#   height = 10,
+#   units = 'in',
+#   dpi = 500
+# )
 
 
 ## id mapping
@@ -40,10 +40,10 @@ View(exprSet)
 write.csv(exprSet, "../data/support_materials/GSE30931_exprSet.csv")
 
 ## PCA
-library(ggfortify)
-df = as.data.frame(t(exprSet))
-df$group = group_list
-png(filename = "../data/support_materials/GSE30931_PCA.png")
-autoplot(prcomp(df[,1:(ncol(df)-1)]), data=df, colour='group')
-dev.off()
+#library(ggfortify)
+#df = as.data.frame(t(exprSet))
+#df$group = group_list
+#png(filename = "../data/support_materials/GSE30931_PCA.png")
+#autoplot(prcomp(df[,1:(ncol(df)-1)]), data=df, colour='group')
+#dev.off()
 
