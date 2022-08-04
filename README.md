@@ -50,6 +50,9 @@ In this work, we used PLA-GNN (**P**rotein **L**ocalization **A**lterations by *
 > > | main_normal.py     | Prediction code for protein location score in control state. |
 > > | main_inter.py      | Prediction code for protein localization score in Bortezomib perturbation state. |
 > >| main.py            | Discovery of potentially mis-localized proteins in Bortezomib perturbation. |
+> > | performance.py     | Performance in the control state and randomized trial.       |
+> >| figure.py          | The breakdown of the dataset for different localization multiplicity figure and the number of proteins in each subcellular location figure. |
+> > | statistics.py      | Generate statistical information about the topology adjustment process. |
 > 
 > data 
 > 
@@ -63,7 +66,7 @@ In this work, we used PLA-GNN (**P**rotein **L**ocalization **A**lterations by *
 > >
 > >log (need to create on your own)
 > >
-> >> This folder stores program execution results.
+> >> This folder stores program execution results (Includes images, run records in txt format, result matrix, etc.).
 
 ---
 
