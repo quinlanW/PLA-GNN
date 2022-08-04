@@ -1,8 +1,6 @@
 '''
 Normal train
 '''
-import dgl
-import torch
 import argparse
 from train import *
 from utils import *

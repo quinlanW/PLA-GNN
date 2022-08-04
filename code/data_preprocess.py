@@ -4,24 +4,14 @@ Generate necessary files
 import copy
 import os
 import json
-import re
-import csv
 import gzip
-import subprocess
-import requests
-import time
-import urllib.parse
-import urllib.request
 import numpy as np
 import pandas as pd
 import scipy.sparse
 from scipy import sparse
 from scipy.sparse import coo_matrix
-from requests.adapters import HTTPAdapter, Retry
-from sklearn.preprocessing import MinMaxScaler
 from pathlib import Path
 from tqdm import tqdm
-from scipy.stats import normaltest
 
 
 def extract_interaction_data(data_file):
@@ -56,8 +46,6 @@ def extract_interaction_data(data_file):
                     uniprot_id_list.add(i2)
                     interaction_list.add((i1, i2))
                     interaction_list.add((i2, i1))
-    # print(len(uniprot_id_list), 'len protein list')
-    # print(len(interaction_list), 'len interaction list')
 
     uniprot_id_list = list(uniprot_id_list)  # dividing the same elements
     uniprot_id_list.sort()

@@ -2,12 +2,8 @@
 Utils
 '''
 import dgl
-import random
-import torch
 import torch as th
-import json
 import numpy as np
-import networkx as nx
 from sklearn.decomposition import PCA
 from scipy.sparse import load_npz, coo_matrix, save_npz
 
