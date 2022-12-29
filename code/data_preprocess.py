@@ -1,5 +1,9 @@
 '''
 Generate necessary files
+
+After running it will be in '... /data/genetate_materials' folder
+to generate the files necessary to run subsequent programs such as
+PPI matrix, ECC matrix, PCC matrix, etc.
 '''
 import copy
 import os
@@ -7,11 +11,11 @@ import json
 import gzip
 import numpy as np
 import pandas as pd
-import scipy.sparse
 from scipy import sparse
-from scipy.sparse import coo_matrix
+from scipy.sparse import coo_matrix, load_npz
 from pathlib import Path
 from tqdm import tqdm
+from sklearn.decomposition import PCA
 
 
 def extract_interaction_data(data_file):
@@ -164,7 +168,7 @@ def edge_clustering_coefficients(ppi_net, epsilon=0):
     return ecc
 
 
-def modify_network_topology(ppi_net, pcc_nor, pcc_inter):
+def modify_network_topology(ppi_net, pcc_nor, pcc_inter, thr):
     with tqdm(total=5, desc='modify protein interaction network') as mod_bar:
         # print(ppi_net.getnnz())
         ppi_net = ppi_net.tocsr()
@@ -173,8 +177,8 @@ def modify_network_topology(ppi_net, pcc_nor, pcc_inter):
         mod_bar.update()
         diff_matrix = pcc_interverion - pcc_normal  # difference matrix
 
-        diff_mat = diff_matrix.tocoo()
-        scipy.sparse.save_npz('../diff', diff_mat)
+        # diff_mat = diff_matrix.tocoo()
+        # scipy.sparse.save_npz('../diff', diff_mat)
 
         mod_bar.update()
         ppi_intervention = copy.deepcopy(ppi_net).todense()
@@ -184,8 +188,8 @@ def modify_network_topology(ppi_net, pcc_nor, pcc_inter):
         diff_matrix = diff_matrix.toarray()
         diff_std = np.std(diff_matrix)
         diff_mean = np.mean(diff_matrix)
-        l_threshold = diff_mean - 2.75 * diff_std
-        r_threshold = diff_mean + 2.75 * diff_std
+        l_threshold = diff_mean - thr * diff_std
+        r_threshold = diff_mean + thr * diff_std
         mod_bar.update()
         # modify topology
         res1 = np.logical_and(diff_matrix < l_threshold, ppi_intervention == 1).A
@@ -228,46 +232,42 @@ def construct_matrix_of_normal_and_intervention_cond(data):
             s_bar.update()
 
     for sample_data in data.values():
-        if not os.path.exists(normal_path + 'GCN_normal.npz'):
-            gcn_normal, expr_normal = construct_gcn_matrix(sample_data[1], sample_data[2]['normal'], protein_list)
-            with tqdm(total=2, desc='GCN normal & expr files store') as s_bar:
-                sparse.save_npz(normal_path + 'GCN_normal', gcn_normal)
-                s_bar.update()
-                if not os.path.exists(normal_path + 'expr_normal'):
-                    np.save(normal_path + 'expr_normal', expr_normal)
-                    s_bar.update()
-        else:
-            with tqdm(total=1, desc='GCN normal file load') as s_bar:
-                gcn_normal = sparse.load_npz(normal_path + 'GCN_normal.npz')
-                s_bar.update()
-
         series = sample_data[1].split('/')[-1].split('_')[0]
-        inter_path = '../data/generate_materials/' + series + '_data/'
+        inter_path = sample_data[4]  # '../data/generate_materials/' + series + '_data/'
         if not os.path.exists(inter_path):
             os.makedirs(inter_path)
 
+        gcn_normal, expr_normal = construct_gcn_matrix(sample_data[1], sample_data[2]['normal'], protein_list)
+        with tqdm(total=2, desc=series + ' GCN normal & expr files store') as s_bar:
+            if not os.path.exists(inter_path + 'GCN_normal.npz'):
+                sparse.save_npz(inter_path + 'GCN_normal', gcn_normal)
+                s_bar.update()
+            if not os.path.exists(inter_path + 'expr_normal.npy'):
+                np.save(inter_path + 'expr_normal', expr_normal)
+                s_bar.update()
+
         if not os.path.exists(inter_path + 'GCN_inter.npz'):
             gcn_inter, expr_inter = construct_gcn_matrix(sample_data[1], sample_data[2]['intervention'], protein_list)
-            with tqdm(total=2, desc='GCN inter & expr files store') as s_bar:
+            with tqdm(total=2, desc=series + ' GCN inter & expr files store') as s_bar:
                 sparse.save_npz(inter_path + 'GCN_inter', gcn_inter)
                 s_bar.update()
                 if not os.path.exists(inter_path + 'expr_inter'):
                     np.save(inter_path + 'expr_inter', expr_inter)
                 s_bar.update()
         else:
-            with tqdm(total=1, desc='GCN inter file load') as s_bar:
+            with tqdm(total=1, desc=series + ' GCN inter file load') as s_bar:
                 gcn_inter = sparse.load_npz(inter_path + 'GCN_inter.npz')
                 s_bar.update()
 
-        ppi_inter = modify_network_topology(ppi_net=ppi_normal, pcc_nor=gcn_normal, pcc_inter=gcn_inter)
+        ppi_inter = modify_network_topology(ppi_net=ppi_normal, pcc_nor=gcn_normal, pcc_inter=gcn_inter, thr=sample_data[3])
         if not os.path.exists(inter_path + 'PPI_inter.npz'):
             sparse.save_npz(inter_path + 'PPI_inter', ppi_inter)
-            print('PPI_inter saved')
+            print(series + ' PPI_inter saved')
 
         ecc_inter = edge_clustering_coefficients(ppi_net=ppi_inter)
         if not os.path.exists(inter_path + 'ECC_inter.npz'):
             sparse.save_npz(inter_path + 'ECC_inter', ecc_inter)
-            print('ECC_inter saved')
+            print(series + ' ECC_inter saved')
 
 
 def judge_gene_onthology_line(line, go_list):
@@ -379,6 +379,13 @@ def extract_data_with_position(label_list):
     return uni_idx
 
 
+def pca(mat, components):
+    pca = PCA(n_components=components, random_state=42)
+    new_node_feat = pca.fit_transform(mat)
+
+    return new_node_feat
+
+
 if __name__ == '__main__':
     data_dict = {
         1: {
@@ -386,17 +393,56 @@ if __name__ == '__main__':
             2: {
                 'normal': ['GSM766676', 'GSM766677', 'GSM766678'],
                 'intervention': ['GSM766682', 'GSM766683', 'GSM766684']
-            }
+            },
+            3: 2.75,
+            4: '../data/generate_materials/GSE30931_data/'
+        },
+        2: {
+            1: '../data/support_materials/GSE27182_exprSet.csv',
+            2: {
+                # 12h
+                'normal': ['GSM671731', 'GSM671732', 'GSM671733'],
+                'intervention': ['GSM671725', 'GSM671726', 'GSM671727']
+                # 48h
+                # 'normal': ['GSM671734', 'GSM671735', 'GSM671736'],
+                # 'intervention': ['GSM671728', 'GSM671729', 'GSM671730']
+            },
+            3: 2.99,
+            4: '../data/generate_materials/GSE27182_data/'
+        },
+        3: {
+            1: '../data/support_materials/GSE74572_exprSet.csv',
+            2: {
+                'normal': ['GSM1923199', 'GSM1923200', 'GSM1923201'],
+                'intervention': ['GSM1923205', 'GSM1923206', 'GSM1923207']
+            },
+            3: 2.91,
+            4: '../data/generate_materials/GSE74572_data/'
         },
     }
 
     construct_matrix_of_normal_and_intervention_cond(data_dict)
     construct_loc_matrix()
 
+    ppi = load_npz('../data/generate_materials/PPI_normal.npz')
+    ecc = load_npz('../data/generate_materials/ECC_normal.npz').toarray()
+    ecc_pca = pca(ecc, 250)
+    np.save('../data/generate_materials/ECC_normal_pca', ecc_pca)
 
+    for val in data_dict.values():
+        data_path = val[4]
+        gcn = load_npz(data_path + 'GCN_normal.npz').tocsr().multiply(ppi.tocsr()).toarray()
+        gcn_pca = pca(gcn, 250)
+        np.save(data_path + 'GCN_normal_pca', gcn_pca)
 
+        ppi_inter = load_npz(data_path + 'PPI_inter.npz')
+        gcn_inter = load_npz(data_path + 'GCN_inter.npz').tocsr().multiply(ppi_inter.tocsr()).toarray()
+        gcn_inter_pca = pca(gcn_inter, 250)
+        np.save(data_path + 'GCN_inter_pca', gcn_inter_pca)
 
-
+        ecc_inter = load_npz(data_path + 'ECC_inter.npz').toarray()
+        ecc_inter_pca = pca(ecc_inter, 250)
+        np.save(data_path + 'ECC_inter_pca', ecc_inter_pca)
 
 
 

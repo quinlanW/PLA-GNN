@@ -1,28 +1,10 @@
+###################################
+## GSE30931
 ## expr matrix
 exprSet = read.table('../data/support_materials/GSE30931_series_matrix.txt', sep = '\t', comment.char = '!', fill = T, header = T)
 View(exprSet)
 class(exprSet)
 str(exprSet)
-
-## box plot
-library(reshape2)
-group_list = c(rep('control', 3), rep('Estrogen', 3), rep('Velcade', 3), rep('Estrogen (6 h) + Velcade', 3))
-exprSet_L = melt(exprSet)
-colnames(exprSet_L) = c('probe', 'sample', 'value')
-exprSet_L$group = rep(group_list, each=nrow(exprSet))
-head(exprSet_L)
-
-# library(ggplot2)
-# p = ggplot(exprSet_L, aes(x=sample, y=value, fill=group)) + geom_boxplot() + theme(axis.text.x = element_text(angle = 45, hjust = 0.5, vjust = 0.5))
-# print(p)
-# ggsave(
-#   filename = "../data/support_materials/GSE30931_boxPlot.png",
-#   width = 10,
-#   height = 10,
-#   units = 'in',
-#   dpi = 500
-# )
-
 
 ## id mapping
 library(illuminaHumanv4.db)
@@ -38,12 +20,67 @@ exprSet <- exprSet %>%
 
 View(exprSet)
 write.csv(exprSet, "../data/support_materials/GSE30931_exprSet.csv")
+###################################
 
-## PCA
-#library(ggfortify)
-#df = as.data.frame(t(exprSet))
-#df$group = group_list
-#png(filename = "../data/support_materials/GSE30931_PCA.png")
-#autoplot(prcomp(df[,1:(ncol(df)-1)]), data=df, colour='group')
-#dev.off()
+###################################
+## GSE31057
+#exprSet_GSE31057 = read.table('../data/support_materials/GSE31057_series_matrix.txt', sep = '\t', comment.char = '!', fill = T, header = T)
+#View(exprSet_GSE31057)
+#class(exprSet_GSE31057)
+#str(exprSet_GSE31057)
+#
+#library(illuminaHumanv3.db)
+#ids = toTable(illuminaHumanv3UNIPROT)
+#names(exprSet_GSE31057)[1] <- names(ids)[1]
+#exprSet_GSE31057$probe_id <- as.character(exprSet_GSE31057$probe_id)
+#
+#library(dplyr)
+#exprSet_GSE31057 <- exprSet_GSE31057 %>%
+#  inner_join(ids, by="probe_id") %>%
+#  dplyr::select(-probe_id) %>%
+#  dplyr::select(uniprot_id, everything())
+#
+#write.csv(exprSet_GSE31057, "../data/support_materials/GSE31057_exprSet.csv")
+###################################
 
+###################################
+## GSE27182
+exprSet_GSE27182 = read.table('../data/support_materials/GSE27182_series_matrix.txt', sep = '\t', comment.char = '!', fill = T, header = T)
+View(exprSet_GSE27182)
+class(exprSet_GSE27182)
+str(exprSet_GSE27182)
+
+library(hgu133plus2.db)
+ids = toTable(hgu133plus2UNIPROT)
+names(exprSet_GSE27182)[1] <- names(ids)[1]
+exprSet_GSE27182$probe_id <- as.character(exprSet_GSE27182$probe_id)
+
+library(dplyr)
+exprSet_GSE27182 <- exprSet_GSE27182 %>%
+  inner_join(ids, by="probe_id") %>%
+  dplyr::select(-probe_id) %>%
+  dplyr::select(uniprot_id, everything())
+
+write.csv(exprSet_GSE27182, "../data/support_materials/GSE27182_exprSet.csv")
+###################################
+
+###################################
+## GSE74572
+exprSet_GSE74572 = read.table('../data/support_materials/GSE74572_series_matrix.txt', sep = '\t', comment.char = '!', fill = T, header = T)
+View(exprSet_GSE74572)
+class(exprSet_GSE74572)
+str(exprSet_GSE74572)
+
+library(hgu133plus2.db)
+ids = toTable(hgu133plus2UNIPROT)
+names(exprSet_GSE74572)[1] <- names(ids)[1]
+exprSet_GSE74572$probe_id <- as.character(exprSet_GSE74572$probe_id)
+
+library(dplyr)
+exprSet_GSE74572 <- exprSet_GSE74572 %>%
+  inner_join(ids, by="probe_id") %>%
+  dplyr::select(-probe_id) %>%
+  dplyr::select(uniprot_id, everything())
+
+write.csv(exprSet_GSE74572, "../data/support_materials/GSE74572_exprSet.csv")
+###################################

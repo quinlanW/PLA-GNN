@@ -3,14 +3,31 @@ Performance
 '''
 import random
 import json
+import glob
 import numpy as np
 from scipy.sparse import load_npz
+
+
+def protein_loc_correction(loc_proba, alpha):  #  24041 12
+    min_proba = loc_proba.min(0)  # 1 12
+    max_proba = loc_proba.max(0)  # 1 12
+    new_proba = (loc_proba - min_proba) / (max_proba - min_proba)
+    sum_proba = new_proba.sum(1).reshape(-1, 1)  # 24041 1
+    new_proba = new_proba / sum_proba
+
+    loc_pred = np.zeros(loc_proba.shape)
+    thresholds = new_proba.max(1) - (new_proba.max(1) - new_proba.min(1)) * alpha
+    for row in range(len(loc_proba)):
+        threshold = thresholds[row]
+        loc_pred[row][new_proba[row] > threshold] = 1.
+    # loc_pred = loc_pred.double()
+    return loc_pred
 
 
 def random_pred(pred, setnum=True):
     random_mat = np.zeros(shape=pred.shape)
     if setnum:
-        pt_num = pred.sum(axis=1)
+        pt_num = pred.sum(axis=1).astype(int)
         for idx in range(len(pt_num)):
             rloc = random.sample(list(range(0, 12)), pt_num[idx])
             random_mat[idx, rloc] = 1
@@ -22,7 +39,7 @@ def random_pred(pred, setnum=True):
     return random_mat
 
 
-def proformances_record(loc_true, loc_pred):
+def performances_record(loc_true, loc_pred):
     mask = np.array([1] * len(loc_true[0]))
     aim = 0.
     cov = 0.
@@ -48,18 +65,45 @@ def proformances_record(loc_true, loc_pred):
     return [aim, cov, acc]
 
 
-if __name__ == '__main__':
-    pred = np.load('../data/log/normal_b10/loc_pred_normal_b10_f9_a0.1.npy')
-    rand_mat_t = random_pred(pred, True)
-
+def performance(file_path="../data/res"):
     with open('../data/generate_materials/label_with_loc_list.json') as f:
         label = json.load(f)
-    true = load_npz('../data/generate_materials/loc_matrix.npz').toarray()
+    true_mat = load_npz('../data/generate_materials/loc_matrix.npz').toarray()[label]
+    states = ['normal']
+    for paths in glob.glob(file_path+'/GSE*'):
+        for state in states:
+            path = paths + '/' + state + '_logits.npy'
+            logit = np.load(path)
+            pred = protein_loc_correction(logit, 0.1)[label]
+            print(paths.split('/')[-1], state)
+            pred_res = performances_record(true_mat, pred)
+            print("AIM: {:.3f}, COV: {:.3f}, ACC: {:.3f}".format(pred_res[0], pred_res[1], pred_res[2]))
+            random_mat_t = random_pred(pred, True)
+            random_mat_f = random_pred(pred, False)
+            random_t = performances_record(true_mat, random_mat_t)
+            random_f = performances_record(true_mat, random_mat_f)
+            print("AIM: {:.3f}, COV: {:.3f}, ACC: {:.3f}".format(random_t[0], random_t[1], random_t[2]))
+            print("AIM: {:.3f}, COV: {:.3f}, ACC: {:.3f}".format(random_f[0], random_f[1], random_f[2]))
+            print("-" * 20)
 
-    pred = pred[label]
-    rand_mat_t = rand_mat_t[label]
-    true = true[label]
 
-    print(proformances_record(true, pred))
-    print(proformances_record(true, rand_mat_t))
+
+
+
+if __name__ == '__main__':
+    performance()
+
+    # pred = np.load('../data/log/normal_b10/loc_pred_normal_b10_f9_a0.1.npy')
+    # rand_mat_t = random_pred(pred, True)
+    #
+    # with open('../data/generate_materials/label_with_loc_list.json') as f:
+    #     label = json.load(f)
+    # true = load_npz('../data/generate_materials/loc_matrix.npz').toarray()
+    #
+    # pred = pred[label]
+    # rand_mat_t = rand_mat_t[label]
+    # true = true[label]
+    #
+    # print(performances_record(true, pred))
+    # print(performances_record(true, rand_mat_t))
 
