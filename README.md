@@ -1,8 +1,8 @@
 # PLA-GNN
 
-> PLA-GNN: Systematic identification of protein localization alterations in breast cancer cells under Bortezomib perturbation with deep graph neural networks
+> PLA-GNN: Systematic identification of protein localization alterations in breast cancer cells under drug perturbation with deep graph neural networks
 
-In this work, we used PLA-GNN (**P**rotein **L**ocalization **A**lterations by **G**raph **N**eural **N**etwork) to identify alterations of  protein localizations in the drug perturbation state. We took the **Bortezomib** and **breast cancer** cell as instances for this study.
+In this work, we used PLA-GNN (**P**rotein **L**ocalization **A**lterations by **G**raph **N**eural **N**etwork) to identify alterations of  protein localizations in the drug perturbation state. We took the case of studies on three drugs, **tacrolimus**, **bortezomib** and **trichostain** **A (TSA)** as instances for this study.
 
 ---
 
@@ -48,14 +48,14 @@ In this work, we used PLA-GNN (**P**rotein **L**ocalization **A**lterations by *
 > >| model.py           | Include graph neural network model code.                     |
 > > | train.py           | Model training and data storage related code.                |
 > > | main_normal.py     | Prediction code for protein location score in control state. |
-> > | main_inter.py      | Prediction code for protein localization score in Bortezomib perturbation state. |
-> >| main.py            | Discovery of potentially mis-localized proteins in Bortezomib perturbation. |
+> > | main_inter.py      | Prediction code for protein localization score in drug perturbation state. |
+> >| main.py            | Discovery of potentially mis-localized proteins in drug perturbation. |
 > > | performance.py     | Performance in the control state and randomized trial.       |
 > >| figure.py          | The breakdown of the dataset for different localization multiplicity figure and the number of proteins in each subcellular location figure. |
 > > | statistics.py      | Generate statistical information about the topology adjustment process. |
-> 
+>
 > data 
-> 
+>
 > >generate_materials (need to create on your own)
 > >
 > >> This folder stores the files generated during program execution for subsequent use. The files in this folder will be generated continuously during the program runtime.
@@ -66,7 +66,11 @@ In this work, we used PLA-GNN (**P**rotein **L**ocalization **A**lterations by *
 > >
 > >log (need to create on your own)
 > >
-> >> This folder stores program execution results (Includes images, run records in txt format, result matrix, etc.).
+> >> This folder stores program execution results (Includes images, run records in txt format, result matrix, etc).
+> >
+> >res (need to create on your own)
+> >
+> >> This folder holds the prediction results for each dataset.
 
 ---
 
@@ -76,6 +80,8 @@ In this work, we used PLA-GNN (**P**rotein **L**ocalization **A**lterations by *
 
 + BIOGRID-ORGANISM-Homo_sapiens-4.4.203.mitab.txt (Download from [BioGRID](https://downloads.thebiogrid.org/BioGRID/Release-Archive/))
 + GSE30931_series_matrix.txt (Download from [NCBI GEO](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE30931))
++ GSE27182_series_matrix.txt (Download from [NCBI GEO](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE27182))
++ GSE74572_series_matrix.txt (Download from [NCBI GEO](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE74572))
 + uniprot_sprot_human.dat.gz (Download from [Uniprot](https://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/taxonomic_divisions/))
 + cellular_component.txt (Customized files with multiple subcellular localizations)
 
@@ -87,7 +93,6 @@ In this work, we used PLA-GNN (**P**rotein **L**ocalization **A**lterations by *
 
 1. Run the R script `data_reader.R` to generate the expression file (csv).
 2. Run `python data_preprocess.py` in the terminal to generate the sparse matrix files for subsequent use.
-3. Run `utils.py` in the terminal.
 4. Run `python main_normal.py` in the terminal.
 5. Run `python main_inter.py` in the terminal.
 6. Run `python main.py` in the terminal to get the protein mis-location scores files.
