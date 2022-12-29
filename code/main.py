@@ -2,6 +2,8 @@
 Mislocalization log
 '''
 import csv
+import os
+import glob
 import numpy as np
 import json
 from tqdm import tqdm
@@ -24,8 +26,26 @@ def scaling(logit_mat):
 
     return mat
 
+def mat_merge(file_path="../data/log"):
+    states = ['normal', 'perturbation']
+    for paths in glob.glob(file_path+'/GSE*'):
+        for state in states:
+            path = paths + '/' + state
+            res_path = path.split(state)[0].replace('log', 'res')
+            if not os.path.exists(res_path):
+                os.makedirs(res_path)
+            mat_cnt = np.zeros((24041, 12))
 
-def misloc_protein_record(normal_mat, inter_mat, threshold=100):
+            for path in sorted(glob.glob(path + '/*.npy')):
+                mat = np.load(path)
+                mat = scaling(mat)
+                mat_cnt += mat
+                # print(path)
+            mat_cnt /= 100
+            np.save(res_path + state + '_logits.npy', mat_cnt)
+
+
+def misloc_protein_record(normal_mat, inter_mat, data, threshold=100):
     # loc mapping
     loc_map = {
         'GO:0005938': 'Cell cortex',
@@ -67,25 +87,25 @@ def misloc_protein_record(normal_mat, inter_mat, threshold=100):
 
     loc_mat = load_npz('../data/generate_materials/loc_matrix.npz').toarray()
 
-    ### labeled
-    with open('../data/log/loc_change_record(labeled).csv', 'a') as f:
-        writer = csv.writer(f, delimiter=',')
-        writer.writerow(["Protein", "Score", "Altered localization", "Original localization"])
-        for indice in diff_indices:
-            row, col = indice // len(loc_list), indice % len(loc_list)
-            if loc_mat[row].sum() != 0 and diff_matrix[row][col] != -1.0:
-                location = loc_map[loc_list[col]]
-                ori_loc_idx = np.where(loc_mat[row] == 1)[0]
-                ori_loc = ','.join([loc_map[i] for i in ori_loc_idx])
-                score = diff_matrix[row][col]
-                if score > 0 and location not in ori_loc:  # add loc
-                    protein = protein_list[row]
-                    writer.writerow([protein, score, location, ori_loc])
-                    # res_labeled[protein] = [np.float64(score), location, ori_loc]
-                if score < 0 and location in ori_loc:  # remove loc
-                    protein = protein_list[row]
-                    writer.writerow([protein, score, location, ori_loc])
-                    # res_labeled[protein] = [np.float64(score), location, ori_loc]
+    # ### labeled
+    # with open('../data/res/' + data + '/loc_change_record(labeled).csv', 'a') as f:
+    #     writer = csv.writer(f, delimiter=',')
+    #     writer.writerow(["Protein", "Score", "Altered localization", "Original localization"])
+    #     for indice in diff_indices:
+    #         row, col = indice // len(loc_list), indice % len(loc_list)
+    #         if loc_mat[row].sum() != 0 and diff_matrix[row][col] != -1.0:
+    #             location = loc_map[loc_list[col]]
+    #             ori_loc_idx = np.where(loc_mat[row] == 1)[0]
+    #             ori_loc = ','.join([loc_map[i] for i in ori_loc_idx])
+    #             score = diff_matrix[row][col]
+    #             if score > 0 and location not in ori_loc:  # add loc
+    #                 protein = protein_list[row]
+    #                 writer.writerow([protein, score, location, ori_loc])
+    #                 # res_labeled[protein] = [np.float64(score), location, ori_loc]
+    #             if score < 0 and location in ori_loc:  # remove loc
+    #                 protein = protein_list[row]
+    #                 writer.writerow([protein, score, location, ori_loc])
+    #                 # res_labeled[protein] = [np.float64(score), location, ori_loc]
 
     # res_labeled = {}
     # rank = 1
@@ -119,39 +139,42 @@ def misloc_protein_record(normal_mat, inter_mat, threshold=100):
     ### all data
     res_alldata = {}
     rank = 1
-    with open('../data/log/loc_change_record(all data).csv', 'a') as f:
+    with open('../data/res/' + data + '/loc_change_record.csv', 'a') as f:
         writer = csv.writer(f, delimiter=',')
-        writer.writerow(["Protein", "Score", "Altered localization"])
+        writer.writerow(["Protein", "Score", "Altered localization", "Normal score", "Perturbation score"])
         for indice in tqdm(diff_indices):
             row, col = indice // len(loc_list), indice % len(loc_list)
             if diff_matrix[row][col] != -1.0:
                 location = loc_map[loc_list[col]]
                 score = diff_matrix[row][col]
+                normal_score = normal[row][col]
+                inter_score = inter[row][col]
                 if score > 0:  # add loc
                     protein = protein_list[row]
-                    writer.writerow([protein, score, location])
+                    writer.writerow([protein, score, location, normal_score, inter_score])
                     if protein in res_alldata.keys():
-                        res_alldata[protein].append([np.float64(score), location, rank])
+                        res_alldata[protein].append([np.float64(score), location, rank, np.float64(normal_score), np.float64(inter_score)])
                         rank += 1
                     else:
-                        res_alldata[protein] = [[np.float64(score), location, rank], ]
+                        res_alldata[protein] = [[np.float64(score), location, rank, np.float64(normal_score), np.float64(inter_score)], ]
                         rank += 1
                 if score < 0:  # remove loc
                     protein = protein_list[row]
-                    writer.writerow([protein, score, location])
+                    writer.writerow([protein, score, location, normal_score, inter_score])
                     if protein in res_alldata.keys():
-                        res_alldata[protein].append([np.float64(score), location, rank])
+                        res_alldata[protein].append([np.float64(score), location, rank, np.float64(normal_score), np.float64(inter_score)])
                         rank += 1
                     else:
-                        res_alldata[protein] = [[np.float64(score), location, rank], ]
+                        res_alldata[protein] = [[np.float64(score), location, rank, np.float64(normal_score), np.float64(inter_score)], ]
                         rank += 1
 
-    with open('../data/log/res_alldata.json', 'w') as f:
+    with open('../data/res/' + data + '/res_alldata.json', 'w') as f:
         json.dump(res_alldata, f)
 
 
 if __name__ == "__main__":
-    loc_normal = np.load('../data/log/normal_b10/loc_logit_normal_b10_f9_a0.1.npy')
-    loc_inter = np.load('../data/log/inter_b10/loc_logit_inter_b10_f9_a0.1.npy')
-    print(loc_inter.shape)
-    misloc_protein_record(loc_normal, loc_inter)
+    # mat_merge()
+    for data in ['GSE27182', 'GSE30931', 'GSE74572']:
+        loc_normal = np.load('../data/res/' + data + '/normal_logits.npy')
+        loc_inter = np.load('../data/res/' + data + '/perturbation_logits.npy')
+        misloc_protein_record(loc_normal, loc_inter, data)
