@@ -10,27 +10,27 @@ In this work, we used PLA-GNN (**P**rotein **L**ocalization **A**lterations by *
 
 ### 1.1 R
 
-| Requirements       | Release |
-| :----------------- | :------ |
-| R                  | 3.6     |
-| reshape2           | 1.4.4   |
+|    Requirements    | Release |
+| :----------------: | :-----: |
+|         R          |   3.6   |
+|      reshape2      |  1.4.4  |
 | illuminaHumanv4.db | 1.26.0  |
-| dplyr              | 1.0.9   |
+|       dplyr        |  1.0.9  |
 
 ### 1.2 Python
 
-| Requirements | Release      |
-| :----------- | :----------- |
-| CUDA         | 11.6         |
-| Python       | 3.8.10       |
-| torch        | 1.10.0+cu113 |
-| dgl_cu113    | 0.8.2.post1  |
-| numpy        | 1.21.4       |
-| pandas       | 1.4.3        |
-| scikit-learn | 1.1.1        |
-| spicy        | 1.8.1        |
-| matplotlib   | 3.5.0        |
-| tqdm         | 4.61.2       |
+| Requirements |   Release    |
+| :----------: | :----------: |
+|     CUDA     |     11.6     |
+|    Python    |    3.8.10    |
+|    torch     | 1.10.0+cu113 |
+|  dgl_cu113   | 0.8.2.post1  |
+|    numpy     |    1.21.4    |
+|    pandas    |    1.4.3     |
+| scikit-learn |    1.1.1     |
+|    spicy     |    1.8.1     |
+|  matplotlib  |    3.5.0     |
+|     tqdm     |    4.61.2    |
 
 ---
 
@@ -40,23 +40,22 @@ In this work, we used PLA-GNN (**P**rotein **L**ocalization **A**lterations by *
 >
 > > This folder stores the code files. 
 > >
-> > | File               | Description                                                  |
-> > | :----------------- | :----------------------------------------------------------- |
-> > | data_reader.R      | Convert gene expression data to CSV file from GEO downloads. |
+> > |        File        | Description                                                  |
+> > | :----------------: | :----------------------------------------------------------- |
+> > |   data_reader.R    | Convert gene expression data to CSV file from GEO downloads. |
 > >| data_preprocess.py | Generate multi-conditional PPI, ECC, PCC sparse matrix files and some related ancillary files. |
-> > | utils.py           | Include building graph, data normalization and other code.   |
-> >| model.py           | Include graph neural network model code.                     |
-> > | train.py           | Model training and data storage related code.                |
-> > | main_normal.py     | Prediction code for protein location score in control state. |
-> > | main_inter.py      | Prediction code for protein localization score in drug perturbation state. |
-> >| main.py            | Discovery of potentially mis-localized proteins in drug perturbation. |
-> > | performance.py     | Performance in the control state and randomized trial.       |
-> >| figure.py          | The breakdown of the dataset for different localization multiplicity figure and the number of proteins in each subcellular location figure. |
-> > | statistics.py      | Generate statistical information about the topology adjustment process. |
->
-> data 
->
-> >generate_materials (need to create on your own)
+> > |      utils.py      | Include building graph, data normalization and other code.   |
+> >|      model.py      | Include graph neural network model code.                     |
+> > |      train.py      | Model training and data storage related code.                |
+> > |   main_normal.py   | Prediction code for protein location score in control state. |
+> > |   main_inter.py    | Prediction code for protein localization score in drug perturbation state. |
+> >|      main.py       | Discovery of potentially mis-localized proteins in drug perturbation. |
+> > |   performance.py   | Performance in the control state and randomized trial.       |
+> >|   statistics.py    | Generate statistical information about the topology adjustment process. |
+> 
+>data 
+> 
+>>generate_materials (need to create on your own)
 > >
 > >> This folder stores the files generated during program execution for subsequent use. The files in this folder will be generated continuously during the program runtime.
 > >
