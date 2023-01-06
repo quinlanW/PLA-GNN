@@ -9,6 +9,13 @@ import matplotlib.pyplot as plt
 
 
 def data_normalize(mat):
+    """
+    Normalization functions
+
+    :param mat: matrix
+    :return:
+        mat_normalize
+    """
     mat_normalize = mat.copy()
     p_mean = mat_normalize.mean(0)
     p_std = mat_normalize.std(0)
@@ -19,6 +26,18 @@ def data_normalize(mat):
 
 
 def create_graph(ppi, ecc, gcn, loc, expr, uniprot):
+    """
+    Graph construction
+
+    :param ppi: protein protein interaction network
+    :param ecc: edge clustering coefficient matrix
+    :param gcn: protein co-expression matrix
+    :param loc: protein localization matrix
+    :param expr: protein expression matrix
+    :param uniprot: uniprot list (protein in ppi network)
+    :return:
+        graph
+    """
     start = list(ppi.row)
     end = list(ppi.col)
     num_nodes = len(uniprot)

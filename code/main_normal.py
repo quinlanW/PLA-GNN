@@ -20,9 +20,9 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-data', type=str, metavar='Dataset used for training\n'
                                                    '\t Available options:\n'
-                                                   '\t\tGSE30931'
-                                                   '\t\tGSE74572'
-                                                   '\t\tGSE27182')
+                                                   '\t\tGSE30931 - Bortezomib'
+                                                   '\t\tGSE74572 - Trichostatin A'
+                                                   '\t\tGSE27182 - Tacrolimus')
     parser.add_argument('-lr', type=float, default=0.00005, metavar='learning rate')
     parser.add_argument('-f', type=int, default=10, metavar='fold num')
     parser.add_argument('-e', type=int, default=200, metavar='epoch num')

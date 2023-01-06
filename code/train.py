@@ -15,6 +15,14 @@ from torch.nn import MultiLabelSoftMarginLoss
 
 
 def protein_loc_correction(loc_proba, alpha):  #  24041 12
+    """
+    Normalization
+
+    :param loc_proba: Position prediction probability matrix
+    :param alpha: Coefficient
+    :return:
+        Location prediction matrix
+    """
     min_proba = loc_proba.min(dim=0).values  # 1 12
     max_proba = loc_proba.max(dim=0).values  # 1 12
     new_proba = (loc_proba - min_proba) / (max_proba - min_proba)
@@ -30,7 +38,15 @@ def protein_loc_correction(loc_proba, alpha):  #  24041 12
     return loc_pred
 
 
-def proformances_record(loc_true, loc_pred):
+def performances_record(loc_true, loc_pred):
+    """
+    Performances record
+
+    :param loc_true: Real location matrix
+    :param loc_pred: Predictive location matrix
+    :return:
+        performance - aim, cov, acc, atr, afr
+    """
     loc_true = loc_true.clone().detach().long().cpu()
     loc_pred = loc_pred.clone().detach().long().cpu()
     mask = torch.tensor([1] * len(loc_true[0]), device='cpu')
@@ -69,6 +85,15 @@ def proformances_record(loc_true, loc_pred):
 
 
 def multi_loss(input, target, i_weight):
+    """
+    Loss function
+
+    :param input: predict
+    :param target: real
+    :param i_weight: weight
+    :return:
+        loss
+    """
     loss = 0
     for i in range(len(i_weight)):
         scl_input = input[:, i]
@@ -82,6 +107,13 @@ def multi_loss(input, target, i_weight):
 
 
 def weight_cal(loc_mat):
+    """
+    Calculation of different location weights
+
+    :param loc_mat: real location matrix
+    :return:
+        weight
+    """
     class_num = loc_mat.sum(axis=0)  # num in each class
     sample_num = 0
     for line in loc_mat:  # count num with label
@@ -163,8 +195,8 @@ def train(g, lr, fold_num, epoch_num, alpha_list, device, path):
                     pred = protein_loc_correction(logits, alpha=alpha)
 
                     # Compute accuracy on training/validation
-                    train_aim, train_cov, train_acc, train_atr, train_afr = proformances_record(labels[train_index], pred[train_index])
-                    val_aim, val_cov, val_acc, val_atr, val_afr = proformances_record(labels[val_index], pred[val_index])
+                    train_aim, train_cov, train_acc, train_atr, train_afr = performances_record(labels[train_index], pred[train_index])
+                    val_aim, val_cov, val_acc, val_atr, val_afr = performances_record(labels[val_index], pred[val_index])
 
                     # record
 

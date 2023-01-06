@@ -1,6 +1,6 @@
-'''
+"""
 Performance
-'''
+"""
 import random
 import json
 import glob
@@ -8,7 +8,15 @@ import numpy as np
 from scipy.sparse import load_npz
 
 
-def protein_loc_correction(loc_proba, alpha):  #  24041 12
+def protein_loc_correction(loc_proba, alpha):  # 24041 12
+    """
+    regularization
+
+    :param loc_proba: Location probability matrix
+    :param alpha: Coefficient
+    :return:
+        loc_pred - location prediction matrix
+    """
     min_proba = loc_proba.min(0)  # 1 12
     max_proba = loc_proba.max(0)  # 1 12
     new_proba = (loc_proba - min_proba) / (max_proba - min_proba)
@@ -25,6 +33,14 @@ def protein_loc_correction(loc_proba, alpha):  #  24041 12
 
 
 def random_pred(pred, setnum=True):
+    """
+    Random guess positioning matrix.
+
+    :param pred: Prediction matrix (for determining matrix shape only)
+    :param setnum: Set whether the number of guesses localized for each protein is the same as the prediction.
+    :return:
+        random_mat
+    """
     random_mat = np.zeros(shape=pred.shape)
     if setnum:
         pt_num = pred.sum(axis=1).astype(int)
@@ -40,6 +56,14 @@ def random_pred(pred, setnum=True):
 
 
 def performances_record(loc_true, loc_pred):
+    """
+    Performance evaluation
+
+    :param loc_true: Real location matrix.
+    :param loc_pred: Predictive location matrix.
+    :return:
+        performance - [aim, cov, acc]
+    """
     mask = np.array([1] * len(loc_true[0]))
     aim = 0.
     cov = 0.
@@ -87,23 +111,7 @@ def performance(file_path="../data/res"):
             print("-" * 20)
 
 
-
-
-
 if __name__ == '__main__':
     performance()
 
-    # pred = np.load('../data/log/normal_b10/loc_pred_normal_b10_f9_a0.1.npy')
-    # rand_mat_t = random_pred(pred, True)
-    #
-    # with open('../data/generate_materials/label_with_loc_list.json') as f:
-    #     label = json.load(f)
-    # true = load_npz('../data/generate_materials/loc_matrix.npz').toarray()
-    #
-    # pred = pred[label]
-    # rand_mat_t = rand_mat_t[label]
-    # true = true[label]
-    #
-    # print(performances_record(true, pred))
-    # print(performances_record(true, rand_mat_t))
 

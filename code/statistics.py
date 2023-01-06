@@ -1,3 +1,6 @@
+"""
+Protein-protein interaction network statistics
+"""
 from scipy.sparse import coo_matrix, load_npz
 import numpy as np
 import copy
@@ -8,9 +11,7 @@ import gc
 data_dict = {
     1: {1: '../data/generate_materials/GSE30931_data/', 2: 2.75},
     2: {1: '../data/generate_materials/GSE74572_data/', 2: 2.91},
-    # 2: {1: '../data/generate_materials/GSE31057_data/', 2: 2.80},  # not used
-    # 3: {1: '../data/generate_materials/GSE31057_2_data/', 2: 2.82},  # not used
-    4: {1: '../data/generate_materials/GSE27182_data/', 2: 2.99}
+    3: {1: '../data/generate_materials/GSE27182_data/', 2: 2.99}
 }
 
 with open('../data/log/statistics.txt', 'a') as f:
@@ -18,8 +19,8 @@ with open('../data/log/statistics.txt', 'a') as f:
         path = val[1]
         GSE = path.split('/')[-2]
         f.write('#'*20 + ' ' + GSE + ' ' + '#'*20 + '\n')
-        ### Network topology adjustment
-        ppi_net = load_npz('../data/generate_materials/PPI_normal.npz')  # 正常条件ppi
+        # Network topology adjustment
+        ppi_net = load_npz('../data/generate_materials/PPI_normal.npz')  # normal ppi
         pcc_nor = load_npz(path + 'GCN_normal.npz')
         pcc_inter_path = path + 'GCN_inter.npz'
         pcc_inter = load_npz(pcc_inter_path)
@@ -42,14 +43,16 @@ with open('../data/log/statistics.txt', 'a') as f:
             r_threshold = diff_mean + thr * diff_std
 
             # modify topology
-            l_num = (diff_matrix < l_threshold).astype(int).sum()  # 小于左侧阈值的数量
-            r_num = (diff_matrix > r_threshold).astype(int).sum()  # 大于右侧阈值的数量
-            conn = (ppi_intervention == 1).astype(int).sum()  # 原来存在链接的数量
-            res1 = np.logical_and(diff_matrix < l_threshold, ppi_intervention == 1).A  # 原来有连接，且小于左侧阈值 —— 说明需要断开连接
+            l_num = (diff_matrix < l_threshold).astype(int).sum()  # Less than the left-hand threshold
+            r_num = (diff_matrix > r_threshold).astype(int).sum()  # Number greater than the right-hand threshold
+            conn = (ppi_intervention == 1).astype(int).sum()  # Number of original existing links
+            # Originally connected and less than the threshold on the left - indicates the need to disconnect
+            res1 = np.logical_and(diff_matrix < l_threshold, ppi_intervention == 1).A
             res_rmv = coo_matrix(res1.astype(int))
             # sp.save_npz(path + str(thr*100) + '-rmv', res_rmv)
             res11 = res1.sum()
-            res2 = np.logical_and(diff_matrix > r_threshold, ppi_intervention == 0).A  # 原来没有连接，且大于右侧阈值 —— 说明需要增加连接
+            # Originally there was no connection and it was greater than the threshold on the right - indicating the need for additional connections
+            res2 = np.logical_and(diff_matrix > r_threshold, ppi_intervention == 0).A
             res_add = coo_matrix(res2.astype(int))
             # sp.save_npz(path + str(thr*100) + '-add', res_add)
             res22 = res2.sum()
@@ -69,9 +72,9 @@ with open('../data/log/statistics.txt', 'a') as f:
                 "Higher than the upper threshold value: " + str(r_num) + "  Percentage: " + str(r_num / pcc_all * 100) + '\n'
             )
 
-            ppi_intervention[res1] = 0  # 断开连接
-            ppi_intervention[res2] = 1  # 增加连接
-            alt_conn = (ppi_intervention == 1).astype(int).sum()  # Number of connections after modification  调整拓扑后的连接的数量
+            ppi_intervention[res1] = 0  # Disconnection
+            ppi_intervention[res2] = 1  # Adding connections
+            alt_conn = (ppi_intervention == 1).astype(int).sum()  # Number of connections after topology adjustment
             print("number of connection after mod: ", alt_conn)
             print("Removed: ", res11, "  Percentage(before the topology adjustment): ", res11 / conn * 100)
             print("Added: ", res22, "  Percentage(after the topology adjustment): ", res22 / alt_conn * 100)
@@ -82,7 +85,7 @@ with open('../data/log/statistics.txt', 'a') as f:
             )
 
             # print("=====" * 10)
-            ### Co-localization analysis of interacting proteins
+            # Co-localization analysis of interacting proteins
             # add = sp.load_npz(path + str(thr*100) + '-add.npz')
             # rmv = sp.load_npz(path + str(thr*100) + '-rmv.npz')
 
@@ -125,7 +128,7 @@ with open('../data/log/statistics.txt', 'a') as f:
                     add_count['both'] += 1
                     lA = loc_mat[protA]
                     lB = loc_mat[protB]
-                    res = np.logical_and(lA, lB).any()  # 判断有没有相同的定位
+                    res = np.logical_and(lA, lB).any()  # Determine if there is the same positioning
                     if res:
                         add_count['same_add'] += 1
                     else:

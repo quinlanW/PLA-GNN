@@ -1,10 +1,10 @@
-'''
+"""
 Generate necessary files
 
 After running it will be in '... /data/genetate_materials' folder
 to generate the files necessary to run subsequent programs such as
 PPI matrix, ECC matrix, PCC matrix, etc.
-'''
+"""
 import copy
 import os
 import json
@@ -19,6 +19,15 @@ from sklearn.decomposition import PCA
 
 
 def extract_interaction_data(data_file):
+    """
+    Extracts interaction information from the file.
+
+    :param data_file: interaction data file (BIOGRID-ORGANISM-Homo_sapiens-4.4.203.mitab.txt)
+    :return:
+            dict
+               - 'id_list': uniprot_id_list,
+               - 'interaction_list': interaction_list
+    """
     uniprot_id_list = set()  # store biogrid id or the protein in the network <str>
     interaction_list = set()  # store protein interactions in the network <tuple>
 
@@ -63,6 +72,14 @@ def extract_interaction_data(data_file):
 
 
 def construct_uniprot_ppi(uniprot_list, interaction_list):
+    """
+    Construction the protein-protein interaction network.
+
+    :param uniprot_list: uniprot list in interaction file
+    :param interaction_list: interaction list in interacrion file
+    :return:
+        ppi coo matrix
+    """
     node_set = set()
     idx_map = {}
     flag = 0
@@ -94,6 +111,14 @@ def construct_uniprot_ppi(uniprot_list, interaction_list):
 
 
 def construct_normal_ppi(data='../data/support_materials/BIOGRID-ORGANISM-Homo_sapiens-4.4.203.mitab.txt'):
+    """
+    Construction of the protein protein interaction network under normal condition.
+
+    :param data: interaction data file (BIOGRID-ORGANISM-Homo_sapiens-4.4.203.mitab.txt)
+    :return:
+        ppi coo matrix
+        interacrion protein uniprot ac list
+    """
     interaction_data = extract_interaction_data(data_file=data)
     ppi = construct_uniprot_ppi(uniprot_list=interaction_data['id_list'], interaction_list=interaction_data['interaction_list'])
 
@@ -101,6 +126,16 @@ def construct_normal_ppi(data='../data/support_materials/BIOGRID-ORGANISM-Homo_s
 
 
 def construct_gcn_matrix(data, sample_list, protein_list):
+    """
+    Constructing protein co-expression networks.
+
+    :param data: protein expression data file (GEO)
+    :param sample_list: samples used
+    :param protein_list: protein (uniprot ac) list in ppi
+    :return:
+        gcn - Protein co-expression coefficient matrix
+        expr_gcn - Protein expression matrix
+    """
     expr_set = pd.read_csv(data)
     extract_list = ['uniprot_id']
     extract_list.extend(sample_list)
@@ -138,6 +173,14 @@ def construct_gcn_matrix(data, sample_list, protein_list):
 
 
 def edge_clustering_coefficients(ppi_net, epsilon=0):
+    """
+    Construct edge clusters coefficient matrix.
+
+    :param ppi_net: ppi network (coo matrix)
+    :param epsilon: The value when the denominator is 0, the default is 0
+    :return:
+        ecc network (coo matrix)
+    """
     ppi = ppi_net.tocsr()
     ecc_row = []
     ecc_col = []
@@ -169,6 +212,16 @@ def edge_clustering_coefficients(ppi_net, epsilon=0):
 
 
 def modify_network_topology(ppi_net, pcc_nor, pcc_inter, thr):
+    """
+    Protein-protein interaction network topology adjustment.
+
+    :param ppi_net: ppi network (coo matrix)
+    :param pcc_nor: normal pcc network (coo matrix)
+    :param pcc_inter: drug intervention pcc network (coo matrix)
+    :param thr: threshold
+    :return:
+        ppi_intervention
+    """
     with tqdm(total=5, desc='modify protein interaction network') as mod_bar:
         # print(ppi_net.getnnz())
         ppi_net = ppi_net.tocsr()
@@ -205,6 +258,12 @@ def modify_network_topology(ppi_net, pcc_nor, pcc_inter, thr):
     return ppi_intervention
 
 def construct_matrix_of_normal_and_intervention_cond(data):
+    """
+    Build the required matrix files.
+
+    :param data: Expression files (dict)
+    :return: none
+    """
     normal_path = '../data/generate_materials/'
     protein_list_path = normal_path + 'protein_ppi.json'
 
@@ -271,6 +330,13 @@ def construct_matrix_of_normal_and_intervention_cond(data):
 
 
 def judge_gene_onthology_line(line, go_list):
+    """
+    Judgment function
+
+    :param line:
+    :param go_list:
+    :return:
+    """
     if line.startswith('DR   GO;') and 'C:' in line and ('IDA' in line or 'HDA' in line or 'IEA' in line or 'EXP' in line or 'IPI' in line) and line[9:19] in go_list:
         return True
     else:
@@ -278,6 +344,13 @@ def judge_gene_onthology_line(line, go_list):
 
 
 def extract_localization_data(uniprot_sprot_data='../data/support_materials/uniprot_sprot_human.dat.gz'):
+    """
+    Protein localization extraction.
+
+    :param uniprot_sprot_data: Protein localization file (uniprot_sprot_human.dat.gz)
+    :return:
+        label_list
+    """
     with tqdm(total=3, desc='cellular component data reading') as loc_bar:
         with gzip.open(uniprot_sprot_data) as f:
             data = f.read().decode()
@@ -321,12 +394,13 @@ def extract_localization_data(uniprot_sprot_data='../data/support_materials/unip
 
 def construct_protein_loc_matrix(label_list):
     """
-    Construction of protein localization annotation matrix
+    Construction of protein localization annotation matrix.
 
-    :param vir_loc_list: Virtual positioning protein list.
-    :param file: Generate files
-    :return: protein localization annotation matrix
+    :param label_list:
+    :return:
+        loc_matrix - protein localization annotation matrix
     """
+
     with open('../data/support_materials/cellular_component.txt') as f:
         loc_list = f.read().split()
 
@@ -354,6 +428,10 @@ def construct_protein_loc_matrix(label_list):
 
 
 def construct_loc_matrix():
+    """
+    Protein localization matrix function (Functional integration)
+    :return:
+    """
     label_list = extract_localization_data()
     loc_matrix = construct_protein_loc_matrix(label_list)
     label_with_loc = extract_data_with_position(label_list)
@@ -368,6 +446,12 @@ def construct_loc_matrix():
 
 
 def extract_data_with_position(label_list):
+    """
+    Protein extraction with localization tags.
+    :param label_list:
+    :return:
+        uni_idx
+    """
     uni_list, loc_list = zip(*label_list)
     uni_idx = []
     for item in label_list:
@@ -380,6 +464,14 @@ def extract_data_with_position(label_list):
 
 
 def pca(mat, components):
+    """
+    PCA
+
+    :param mat: matrix
+    :param components: components
+    :return:
+        new mat
+    """
     pca = PCA(n_components=components, random_state=42)
     new_node_feat = pca.fit_transform(mat)
 
