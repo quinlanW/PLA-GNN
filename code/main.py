@@ -1,5 +1,7 @@
 '''
 Mislocalization log
+
+For generating predictions of protein mislocalization under drug intervention
 '''
 import csv
 import os

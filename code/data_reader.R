@@ -22,26 +22,6 @@ View(exprSet)
 write.csv(exprSet, "../data/support_materials/GSE30931_exprSet.csv")
 ###################################
 
-###################################
-## GSE31057
-#exprSet_GSE31057 = read.table('../data/support_materials/GSE31057_series_matrix.txt', sep = '\t', comment.char = '!', fill = T, header = T)
-#View(exprSet_GSE31057)
-#class(exprSet_GSE31057)
-#str(exprSet_GSE31057)
-#
-#library(illuminaHumanv3.db)
-#ids = toTable(illuminaHumanv3UNIPROT)
-#names(exprSet_GSE31057)[1] <- names(ids)[1]
-#exprSet_GSE31057$probe_id <- as.character(exprSet_GSE31057$probe_id)
-#
-#library(dplyr)
-#exprSet_GSE31057 <- exprSet_GSE31057 %>%
-#  inner_join(ids, by="probe_id") %>%
-#  dplyr::select(-probe_id) %>%
-#  dplyr::select(uniprot_id, everything())
-#
-#write.csv(exprSet_GSE31057, "../data/support_materials/GSE31057_exprSet.csv")
-###################################
 
 ###################################
 ## GSE27182
