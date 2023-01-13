@@ -8,7 +8,7 @@ In this work, we used PLA-GNN (**P**rotein **L**ocalization **A**lterations by *
 
 ## 1 Requirements
 
-### 1.1 R
+### 1.1 R requirements
 
 |    Requirements    | Release |
 | :----------------: | :-----: |
@@ -17,7 +17,7 @@ In this work, we used PLA-GNN (**P**rotein **L**ocalization **A**lterations by *
 | illuminaHumanv4.db | 1.26.0  |
 |       dplyr        |  1.0.9  |
 
-### 1.2 Python
+### 1.2 Python requirements
 
 | Requirements |   Release    |
 | :----------: | :----------: |
@@ -55,7 +55,7 @@ In this work, we used PLA-GNN (**P**rotein **L**ocalization **A**lterations by *
 > 
 >data 
 > 
->>generate_materials (need to create on your own)
+>>generate_materials 
 > >
 > >> This folder stores the files generated during program execution for subsequent use. The files in this folder will be generated continuously during the program runtime.
 > >
@@ -63,11 +63,11 @@ In this work, we used PLA-GNN (**P**rotein **L**ocalization **A**lterations by *
 > >
 > >> This folder stores project-dependent data files. The files in this folder need to be downloaded and placed in the correct path by yourself before the program running. A more detailed description of the file download will be presented in Section 3.
 > >
-> >log (need to create on your own)
+> >log
 > >
 > >> This folder stores program execution results (Includes images, run records in txt format, result matrix, etc).
 > >
-> >res (need to create on your own)
+> >res
 > >
 > >> This folder holds the prediction results for each dataset.
 
@@ -109,3 +109,6 @@ In this work, we used PLA-GNN (**P**rotein **L**ocalization **A**lterations by *
 |     device [-d]     |  str  | 'cuda'  | Support CPU or GPU to run programs, the default value is recommended. |
 
 > The command `python main_normal.py -h` or `python main_inter.py -h` can be used to display a brief description of the parameters.
+
+___
+
