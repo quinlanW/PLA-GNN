@@ -129,6 +129,59 @@ def subcellular_fig_data():
     print(loc_mul_count)
 
 
+def fig_alpha_data():
+    '''
+    Record distribution map data
+
+    You need to generate the data under different alpha separately (note that you need to modify the file name),
+    and then put the generated json file into the specified folder.
+    :return:
+    '''
+    path = './data/log'  # only for 0.1 (The rest of the cases need to modify the path accordingly)
+    path = './test'
+    dicts = {}
+    for paths in glob.glob(path + '/GSE*'):  # only for 0.1 (The rest of the cases need to modify the path accordingly)
+        file_path = paths + '/normal/txt_log.txt'
+        print(file_path)
+        with open(file_path) as f:
+            content = f.readlines()
+        content = content[3:]
+        # item = paths.split('/')[-1]
+        item = paths.split('-')[0].split('/')[-1]
+        # print(item)
+
+        per_data = []
+        for i in range(len(content)):
+            if i > (len(content) - 3):
+                # print(content[-1])
+                line = content[-1]
+                d = line.strip().split(')')[0:-1]
+                ll = []
+                for p in d:
+                    ll.append(p.split('%')[-1].strip().split('(')[-1])
+                per_data.append(ll)
+                break
+
+            else:
+                first = content[i]
+                second = content[i+1]
+                third = content[i+2]
+                if '-----' in second and '------' in third:
+                    line = first
+                    d = line.strip().split(')')[0:-1]
+                    ll = []
+                    for p in d:
+                        ll.append(p.split('%')[-1].strip().split('(')[-1])
+                    per_data.append(ll)
+
+        per_data = np.array(per_data).astype(float)
+        mean_data = per_data.mean(axis=0)
+
+        dicts[item] = mean_data.tolist()
+
+    with open(path + '/per1.json', 'w') as f:  # (The rest of the cases need to modify the path accordingly)
+        json.dump(dicts, f)
+
 def fig_alpha():
     '''
     Distribution Charts
@@ -194,7 +247,7 @@ if __name__ == '__main__':
     save_diff()
     get_fig_data()
     fig()
-
+    fig_alpha_data()
     fig_alpha()
     subcellular_fig_data()
 
