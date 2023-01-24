@@ -1,6 +1,6 @@
 # PLA-GNN
 
-> PLA-GNN: Systematic identification of protein localization alterations in breast cancer cells under drug perturbation with deep graph neural networks
+> PLA-GNN: Computational inference of protein subcellular location alterations under drug treatments with deep graph neural networks
 
 In this work, we used PLA-GNN (**P**rotein **L**ocalization **A**lterations by **G**raph **N**eural **N**etwork) to identify alterations of  protein localizations in the drug perturbation state. We took the case of studies on three drugs, **tacrolimus**, **bortezomib** and **trichostain** **A (TSA)** as instances for this study.
 
