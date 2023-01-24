@@ -7,6 +7,8 @@ import datetime
 import csv
 import numpy as np
 import matplotlib.pyplot as plt
+import torch
+
 from model import *
 from sklearn.model_selection import KFold
 from sklearn.metrics import roc_auc_score
@@ -123,6 +125,18 @@ def weight_cal(loc_mat):
 
     return i_weight
 
+with open('../data/generate_materials/label_list.json') as f:
+    label_map = json.load(f)
+
+def label_mapping(x):
+    return label_map[x][0]
+
+def res_mapping(a):
+    strs = ''
+    x = np.where(a == 1)[0] + 1
+    for i in range(len(x)):
+        strs += str(x[i]) + ', '
+    return strs[0:-2]
 
 def train(g, lr, fold_num, epoch_num, alpha_list, device, path):
     log_write_flag = True
@@ -139,6 +153,7 @@ def train(g, lr, fold_num, epoch_num, alpha_list, device, path):
 
     with open('../data/generate_materials/label_with_loc_list.json') as f:
         label = json.load(f)
+
 
     # loc with labels - num and scale
     p_label_num = labels.cpu().detach().numpy().astype(int).sum(0)
@@ -161,6 +176,13 @@ def train(g, lr, fold_num, epoch_num, alpha_list, device, path):
             # fold_use = 0
 
             for train_idx, val_idx in kfold.split(label):
+
+                # model_sage = SAGE(g.ndata['feat'].shape[1], 400, 300, 200)
+                # model_mlp = MLP(200, 100, 12)
+                #
+                # sage_mat = model_sage(g, features)
+                # torch.save(sage_mat, '../data/sage_mat.pt')
+
                 model = GNN32(g.ndata['feat'].shape[1], 400, 300, 200, 100, 12).to(device)
                 optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
@@ -223,8 +245,8 @@ def train(g, lr, fold_num, epoch_num, alpha_list, device, path):
                               .format(train_aim, train_cov, train_acc, train_atr, train_afr, train_loss))
                         print('val -- aim: {:.3f}, cov: {:.3f}, acc: {:.3f}, atr: {:.3f}, afr: {:.3f}, loss: {:.8f}'
                               .format(val_aim, val_cov, val_acc, val_atr, val_afr, val_loss))
-                        p_pred = pred.cpu().detach().numpy().astype(int)
-                        p_pred_num = p_pred.sum(0)
+                        p_pred = pred.cpu().detach().numpy().astype(int)  # pred protein loc
+                        p_pred_num = p_pred.sum(0)  # sum for each loc
                         p_pred_scale = p_pred_num / len(p_pred) * 100
                         tplt = "{:.2f}%({:<6})\t{:.2f}%({:<6})\t{:.2f}%({:<6})\t{:.2f}%({:<6})\t" \
                                "{:.2f}%({:<6})\t{:.2f}%({:<6})\t{:.2f}%({:<6})\t{:.2f}%({:<6})\t" \
@@ -287,14 +309,14 @@ def train(g, lr, fold_num, epoch_num, alpha_list, device, path):
                 train_round = np.array([fold] * train_row).reshape(-1, 1)
                 train_fold = np.array([fold_flag] * train_row).reshape(-1, 1)
                 train_flag = np.array([0] * train_row).reshape(-1, 1)
-                train_label = np.char.array(train_label.astype(int).astype(str))
-                t_label = train_label[:, 0] + train_label[:, 1] + train_label[:, 2] + train_label[:, 3] + \
-                          train_label[:, 4] + train_label[:, 5] + train_label[:, 6] + train_label[:, 7] + \
-                          train_label[:, 8] + train_label[:, 9] + train_label[:, 10] + train_label[:, 11]
-                train_pred = np.char.array(train_pred.astype(int).astype(str))
-                t_pred = train_pred[:, 0] + train_pred[:, 1] + train_pred[:, 2] + train_pred[:, 3] + \
-                         train_pred[:, 4] + train_pred[:, 5] + train_pred[:, 6] + train_pred[:, 7] + \
-                         train_pred[:, 8] + train_pred[:, 9] + train_pred[:, 10] + train_pred[:, 11]
+                # train_label = np.char.array(train_label.astype(int).astype(str))
+                # t_label = train_label[:, 0] + train_label[:, 1] + train_label[:, 2] + train_label[:, 3] + \
+                #           train_label[:, 4] + train_label[:, 5] + train_label[:, 6] + train_label[:, 7] + \
+                #           train_label[:, 8] + train_label[:, 9] + train_label[:, 10] + train_label[:, 11]
+                # train_pred = np.char.array(train_pred.astype(int).astype(str))
+                # t_pred = train_pred[:, 0] + train_pred[:, 1] + train_pred[:, 2] + train_pred[:, 3] + \
+                #          train_pred[:, 4] + train_pred[:, 5] + train_pred[:, 6] + train_pred[:, 7] + \
+                #          train_pred[:, 8] + train_pred[:, 9] + train_pred[:, 10] + train_pred[:, 11]
 
                 val_label = labels[val_index].clone().detach().float().cpu().numpy()
                 val_pred = pred[val_index].clone().detach().float().cpu().numpy()
@@ -302,29 +324,35 @@ def train(g, lr, fold_num, epoch_num, alpha_list, device, path):
                 val_round = np.array([fold] * val_row).reshape(-1, 1)
                 val_fold = np.array([fold_flag] * val_row).reshape(-1, 1)
                 val_flag = np.array([1] * val_row).reshape(-1, 1)
-                val_label = np.char.array(val_label.astype(int).astype(str))
-                v_label = val_label[:, 0] + val_label[:, 1] + val_label[:, 2] + val_label[:, 3] + \
-                          val_label[:, 4] + val_label[:, 5] + val_label[:, 6] + val_label[:, 7] + \
-                          val_label[:, 8] + val_label[:, 9] + val_label[:, 10] + val_label[:, 11]
-                val_pred = np.char.array(val_pred.astype(int).astype(str))
-                v_pred = val_pred[:, 0] + val_pred[:, 1] + val_pred[:, 2] + val_pred[:, 3] + \
-                         val_pred[:, 4] + val_pred[:, 5] + val_pred[:, 6] + val_pred[:, 7] + \
-                         val_pred[:, 8] + val_pred[:, 9] + val_pred[:, 10] + val_pred[:, 11]
+                # val_label = np.char.array(val_label.astype(int).astype(str))
+                # v_label = val_label[:, 0] + val_label[:, 1] + val_label[:, 2] + val_label[:, 3] + \
+                #           val_label[:, 4] + val_label[:, 5] + val_label[:, 6] + val_label[:, 7] + \
+                #           val_label[:, 8] + val_label[:, 9] + val_label[:, 10] + val_label[:, 11]
+                # val_pred = np.char.array(val_pred.astype(int).astype(str))
+                # v_pred = val_pred[:, 0] + val_pred[:, 1] + val_pred[:, 2] + val_pred[:, 3] + \
+                #          val_pred[:, 4] + val_pred[:, 5] + val_pred[:, 6] + val_pred[:, 7] + \
+                #          val_pred[:, 8] + val_pred[:, 9] + val_pred[:, 10] + val_pred[:, 11]
 
-                train_info = np.concatenate((train_round, train_fold, train_flag, np.array(train_index).reshape(-1, 1), t_label.reshape(-1, 1), t_pred.reshape(-1, 1)), axis=1)
-                val_info = np.concatenate((val_round, val_fold, val_flag, np.array(val_index).reshape(-1, 1), v_label.reshape(-1, 1), v_pred.reshape(-1, 1)), axis=1)
+                train_index_to_label = np.array(list(map(label_mapping, train_index))).reshape(-1, 1)
+                t_label_to_idx = np.array(list(map(res_mapping, train_label))).reshape(-1, 1)
+                t_pred_to_idx = np.array(list(map(res_mapping, train_pred))).reshape(-1, 1)
+                train_info = np.concatenate((train_round, train_fold, train_flag, train_index_to_label, t_label_to_idx, t_pred_to_idx), axis=1)
+
+                val_index_to_label = np.array(list(map(label_mapping, val_index))).reshape(-1, 1)
+                v_label_to_idx = np.array(list(map(res_mapping, val_label))).reshape(-1, 1)
+                v_pred_to_idx = np.array(list(map(res_mapping, val_pred))).reshape(-1, 1)
+                val_info = np.concatenate((val_round, val_fold, val_flag, val_index_to_label, v_label_to_idx, v_pred_to_idx), axis=1)
 
                 row_info = np.concatenate((train_info, val_info), axis=0)
 
-                with open(path + '/log.csv', 'a+') as f:
-                    writer = csv.writer(f)
+                with open(path + '/log.tsv', 'a+') as f:
+                    writer = csv.writer(f, delimiter='\t')
                     if log_write_flag:
                         writer.writerow(['round', 'fold', 'flag-t0v1', 'index', 'true label', 'predict label'])
-                        # writer.writerow(['round', 'fold', 'train index', 'train label', 'val index', 'val label', 'pred label'])
+                        writer.writerows(row_info)
                         log_write_flag = False
                     else:
                         writer.writerows(row_info)
-                        # writer.writerow([fold, fold_flag, train_index, t_label, val_index, v_label, v_pred])
 
                 fold_flag = fold_flag + 1
 
@@ -340,47 +368,6 @@ def train(g, lr, fold_num, epoch_num, alpha_list, device, path):
         fold = fold + 1
 
 
-        # figures
-        # dpi = 300
-        # # classification by alpha
-        # for alpha in alpha_list:
-        #     # mkdir - alpha
-        #     alpha_path = path + 'a' + str(int(alpha*10)) + '/'
-        #     if not os.path.exists(alpha_path):
-        #         os.mkdir(alpha_path)
-        #     for i in range(fold_num):
-        #         i = i + 1
-        #         # training & validation
-        #         for key in ['aim', 'cov', 'acc', 'atr', 'afr', 'loss']:
-        #             plt.figure(dpi=dpi)
-        #             tra, = plt.plot(epoch, train_dict[alpha][i][key], label='training_1')
-        #             val, = plt.plot(epoch, val_dict[alpha][i][key], label='validation_1')
-        #             plt.xlabel('epoch')
-        #             plt.ylabel(key)
-        #             plt.title(key + ', fold: ' + str(i) + ', alpha: ' + str(alpha))
-        #             plt.legend([tra, val], ['training', 'validation'], loc="best")
-        #             plt.savefig(alpha_path + key + '_fold' + str(i) + '.png')
-        #             plt.close()
-        # # mix alpha
-        # for i in range(fold_num):
-        #     for key in ['aim', 'cov', 'acc', 'atr', 'afr', 'loss']:
-        #         plt_num = len(val_dict)
-        #         if plt_num == 1:
-        #             break
-        #         plt.figure(dpi=dpi)
-        #         if plt_num == 2:
-        #             a1, = plt.plot(epoch, val_dict[alpha_list[0]][i + 1][key], label=str(alpha_list[0]))
-        #             a2, = plt.plot(epoch, val_dict[alpha_list[1]][i + 1][key], label=str(alpha_list[1]))
-        #             plt.legend([a1, a2], [str(alpha_list[0]), str(alpha_list[1])], loc="best")
-        #         if plt_num == 3:
-        #             a1, = plt.plot(epoch, val_dict[alpha_list[0]][i + 1][key], label=str(alpha_list[0]))
-        #             a2, = plt.plot(epoch, val_dict[alpha_list[1]][i + 1][key], label=str(alpha_list[1]))
-        #             a3, = plt.plot(epoch, val_dict[alpha_list[2]][i + 1][key], label=str(alpha_list[2]))
-        #             plt.legend([a1, a2, a3], [str(alpha_list[0]), str(alpha_list[1]), str(alpha_list[2])], loc="best")
-        #         plt.xlabel('epoch')
-        #         plt.ylabel(key)
-        #         plt.title(key + ', fold: ' + str(i + 1))
-        #         plt.savefig(path + 'alpha_mix_' + key + '_fold' + str(i+1) + '.png')
-        #         plt.close()
+
 
 

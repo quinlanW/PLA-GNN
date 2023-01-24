@@ -5,6 +5,7 @@ import random
 import json
 import glob
 import numpy as np
+import os
 from scipy.sparse import load_npz
 
 
@@ -89,29 +90,80 @@ def performances_record(loc_true, loc_pred):
     return [aim, cov, acc]
 
 
-def performance(file_path="../data/res"):
+def mat_merge(file_path="../data/log"):
+    states = ['normal', 'perturbation']
+    for paths in glob.glob(file_path+'/GSE*'):
+        for state in states:
+            for num in range(1, 11):
+                log_path = paths + '/' + state
+                mat_cnt = np.zeros((24041, 12))
+
+                for path in sorted(glob.glob(log_path + '/' + str(num) + '_*.npy')):
+                    mat = np.load(path)
+                    mat_cnt += mat
+                    roundtime = path.split('/')[-1].split('_')[0]
+                mat_cnt /= 10
+                np.save(log_path + '/' + state + '_' + str(roundtime) + '_logits.npy', mat_cnt)
+
+
+def performance(file_path="../data/log"):
     with open('../data/generate_materials/label_with_loc_list.json') as f:
         label = json.load(f)
     true_mat = load_npz('../data/generate_materials/loc_matrix.npz').toarray()[label]
     states = ['normal']
     for paths in glob.glob(file_path+'/GSE*'):
         for state in states:
-            path = paths + '/' + state + '_logits.npy'
-            logit = np.load(path)
-            pred = protein_loc_correction(logit, 0.1)[label]
-            print(paths.split('/')[-1], state)
-            pred_res = performances_record(true_mat, pred)
-            print("AIM: {:.3f}, COV: {:.3f}, ACC: {:.3f}".format(pred_res[0], pred_res[1], pred_res[2]))
-            random_mat_t = random_pred(pred, True)
-            random_mat_f = random_pred(pred, False)
-            random_t = performances_record(true_mat, random_mat_t)
-            random_f = performances_record(true_mat, random_mat_f)
-            print("AIM: {:.3f}, COV: {:.3f}, ACC: {:.3f}".format(random_t[0], random_t[1], random_t[2]))
-            print("AIM: {:.3f}, COV: {:.3f}, ACC: {:.3f}".format(random_f[0], random_f[1], random_f[2]))
-            print("-" * 20)
+            print(paths)
+            AIMs = []
+            COVs = []
+            ACCs = []
+            for num in range(1, 11):
+                path = paths + '/' + state + '/' + state + '_' + str(num) + '_logits.npy'
+                logit = np.load(path)
+                pred = protein_loc_correction(logit, 0.1)[label]
+                pred_res = performances_record(true_mat, pred)
+                AIMs.append(pred_res[0])
+                COVs.append(pred_res[1])
+                ACCs.append(pred_res[2])
+            AIM_mean = np.mean(AIMs)
+            AIM_std = np.std(AIMs)
+            COV_mean = np.mean(COVs)
+            COV_std = np.std(COVs)
+            ACC_mean = np.mean(ACCs)
+            ACC_std = np.std(ACCs)
+            print('AIM: {:.3f} +- {:.3f}'.format(AIM_mean, AIM_std))
+            print('COV: {:.3f} +- {:.3f}'.format(COV_mean, COV_std))
+            print('mlACC: {:.3f} +- {:.3f}'.format(ACC_mean, ACC_std))
+
+    format = np.load('../data/log/GSE74572/normal/normal_1_logits.npy')
+    RAIMs_t, RCOVs_t, RmlACCs_t = [], [], []
+    RAIMs_f, RCOVs_f, RmlACCs_f = [], [], []
+
+    for i in range(10):
+        random_mat_t = random_pred(format, True)
+        random_mat_f = random_pred(format, False)
+        random_t = performances_record(true_mat, random_mat_t)
+        random_f = performances_record(true_mat, random_mat_f)
+        RAIMs_t.append(random_t[0])
+        RCOVs_t.append(random_t[1])
+        RmlACCs_t.append(random_t[2])
+        RAIMs_f.append(random_f[0])
+        RCOVs_f.append(random_f[1])
+        RmlACCs_f.append(random_f[2])
+    print('Random limit')
+    print('AIM: {:.3f} +- {:.3f}'.format(np.mean(RAIMs_t), np.std(RAIMs_t)))
+    print('COV: {:.3f} +- {:.3f}'.format(np.mean(RCOVs_t), np.std(RCOVs_t)))
+    print('mlACC: {:.3f} +- {:.3f}'.format(np.mean(RmlACCs_t), np.std(RmlACCs_t)))
+
+    print('Random')
+    print('AIM: {:.3f} +- {:.3f}'.format(np.mean(RAIMs_f), np.std(RAIMs_f)))
+    print('COV: {:.3f} +- {:.3f}'.format(np.mean(RCOVs_f), np.std(RCOVs_f)))
+    print('mlACC: {:.3f} +- {:.3f}'.format(np.mean(RmlACCs_f), np.std(RmlACCs_f)))
+    print("-" * 20)
 
 
 if __name__ == '__main__':
+    mat_merge()
     performance()
 
 
