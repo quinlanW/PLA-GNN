@@ -14,6 +14,11 @@ from scipy.sparse import coo_matrix, load_npz
 
 
 def save_diff(file_path="../data/generate_materials"):
+    '''
+    This function stores the difference PCC matrix
+    :param file_path:
+    :return:
+    '''
     ppi = load_npz('../data/generate_materials/PPI_normal.npz').todense().astype(int)
     for paths in tqdm(glob.glob(file_path+'/GSE*')):
         pcc_normal = paths +'/GCN_normal.npz'
@@ -35,6 +40,11 @@ def save_diff(file_path="../data/generate_materials"):
 
 
 def get_fig_data(path="../data/generate_materials"):
+    '''
+    This function stores the histogram plot data
+    :param path:
+    :return:
+    '''
     for paths in tqdm(glob.glob(path + '/GSE*')):
         files = ['/diff.npy', '/diff_link.npy', '/diff_unlink.npy']
         hist_data = {
@@ -73,6 +83,11 @@ def get_fig_data(path="../data/generate_materials"):
 
 
 def fig(path="../data/generate_materials"):
+    '''
+    Histogram plotting
+    :param path:
+    :return:
+    '''
     for paths in tqdm(glob.glob(path + '/GSE*_data')):
         fig_data_path = paths + '/hist_data.json'
         with open(fig_data_path) as f:
@@ -98,6 +113,10 @@ def fig(path="../data/generate_materials"):
 
 
 def subcellular_fig_data():
+    '''
+    Positioning diversity data statistics (plotting by software plotting, no python code provided)
+    :return:
+    '''
     loc_data = load_npz('../data/generate_materials/loc_matrix.npz').todense()
     with open('../data/generate_materials/label_list.json') as f:
         label_list = json.load(f)
@@ -111,6 +130,10 @@ def subcellular_fig_data():
 
 
 def fig_alpha():
+    '''
+    Distribution Charts
+    :return:
+    '''
     # cal normal
     loc_data = load_npz('../data/generate_materials/loc_matrix.npz').todense()
     all_label_num = int(loc_data.sum())
@@ -171,7 +194,6 @@ if __name__ == '__main__':
     save_diff()
     get_fig_data()
     fig()
-
 
     fig_alpha()
     subcellular_fig_data()
