@@ -47,7 +47,7 @@ def performances_record(loc_true, loc_pred):
     :param loc_true: Real location matrix
     :param loc_pred: Predictive location matrix
     :return:
-        performance - aim, cov, acc, atr, afr
+        performance - aim, cov, acc
     """
     loc_true = loc_true.clone().detach().long().cpu()
     loc_pred = loc_pred.clone().detach().long().cpu()
@@ -55,8 +55,8 @@ def performances_record(loc_true, loc_pred):
     aim = 0.
     cov = 0.
     acc = 0.
-    atr = 0.
-    afr = 0.
+    # atr = 0.
+    # afr = 0.
     for i in range(len(loc_true)):
         loc_true[i] = torch.eq(mask, loc_true[i])
         loc_pred[i] = torch.eq(mask, loc_pred[i])
@@ -74,16 +74,16 @@ def performances_record(loc_true, loc_pred):
             aim = aim + and_set / pred
         cov = cov + and_set / real
         acc = acc + and_set / or_set
-        atr = atr + correct
-        afr = afr + (or_set - and_set) / len(loc_true[i])
+        # atr = atr + correct
+        # afr = afr + (or_set - and_set) / len(loc_true[i])
 
     aim = float(aim / len(loc_true))
     cov = float(cov / len(loc_true))
     acc = float(acc / len(loc_true))
-    atr = atr / len(loc_true)
-    afr = afr / len(loc_true)
+    # atr = atr / len(loc_true)
+    # afr = afr / len(loc_true)
 
-    return aim, cov, acc, atr, afr
+    return aim, cov, acc
 
 
 def multi_loss(input, target, i_weight):
@@ -147,7 +147,7 @@ def train(g, lr, fold_num, epoch_num, alpha_list, device, path):
 
     epoch = list(range(epoch_num))
 
-    # weight
+    # weight cal
     loc_mat = load_npz('../data/generate_materials/loc_matrix.npz').toarray()
     i_weight = weight_cal(loc_mat)
 
@@ -176,13 +176,6 @@ def train(g, lr, fold_num, epoch_num, alpha_list, device, path):
             # fold_use = 0
 
             for train_idx, val_idx in kfold.split(label):
-
-                # model_sage = SAGE(g.ndata['feat'].shape[1], 400, 300, 200)
-                # model_mlp = MLP(200, 100, 12)
-                #
-                # sage_mat = model_sage(g, features)
-                # torch.save(sage_mat, '../data/sage_mat.pt')
-
                 model = GNN32(g.ndata['feat'].shape[1], 400, 300, 200, 100, 12).to(device)
                 optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
@@ -195,8 +188,8 @@ def train(g, lr, fold_num, epoch_num, alpha_list, device, path):
                     val_index.append(label[idx])
 
                 # evaluation indicators
-                train_aim_list, train_cov_list, train_acc_list, train_atr_list, train_afr_list = [], [], [], [], []
-                val_aim_list, val_cov_list, val_acc_list, val_atr_list, val_afr_list = [], [], [], [], []
+                train_aim_list, train_cov_list, train_acc_list = [], [], []
+                val_aim_list, val_cov_list, val_acc_list = [], [], []
                 train_loss_list, val_loss_list = [], []
 
                 for e in range(epoch_num):
@@ -217,26 +210,22 @@ def train(g, lr, fold_num, epoch_num, alpha_list, device, path):
                     pred = protein_loc_correction(logits, alpha=alpha)
 
                     # Compute accuracy on training/validation
-                    train_aim, train_cov, train_acc, train_atr, train_afr = performances_record(labels[train_index], pred[train_index])
-                    val_aim, val_cov, val_acc, val_atr, val_afr = performances_record(labels[val_index], pred[val_index])
+                    train_aim, train_cov, train_acc = performances_record(labels[train_index], pred[train_index])
+                    val_aim, val_cov, val_acc = performances_record(labels[val_index], pred[val_index])
 
                     # record
-
                     train_loss_list.append(train_loss.item())
                     val_loss_list.append(val_loss.item())
 
                     train_aim_list.append(train_aim)
                     train_cov_list.append(train_cov)
                     train_acc_list.append(train_acc)
-                    train_atr_list.append(train_atr)
-                    train_afr_list.append(train_afr.item())
 
                     val_aim_list.append(val_aim)
                     val_cov_list.append(val_cov)
                     val_acc_list.append(val_acc)
-                    val_atr_list.append(val_atr)
-                    val_afr_list.append(val_afr.item())
 
+                    # print console log
                     if e % 5 == 0 or e == (epoch_num - 1):
                         time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
                         print('TIME: {}, In epoch {} / fold {} / round {}, learning rate: {:.10f}, alpha: {:.2f}'
@@ -251,6 +240,7 @@ def train(g, lr, fold_num, epoch_num, alpha_list, device, path):
                         tplt = "{:.2f}%({:<6})\t{:.2f}%({:<6})\t{:.2f}%({:<6})\t{:.2f}%({:<6})\t" \
                                "{:.2f}%({:<6})\t{:.2f}%({:<6})\t{:.2f}%({:<6})\t{:.2f}%({:<6})\t" \
                                "{:.2f}%({:<6})\t{:.2f}%({:<6})\t{:.2f}%({:<6})\t{:.2f}%({:<6})\n"
+                        # print the number of proteins under each localization
                         print(tplt.format(p_label_scale[0], p_label_num[0], p_label_scale[1], p_label_num[1],
                                           p_label_scale[2], p_label_num[2], p_label_scale[3], p_label_num[3],
                                           p_label_scale[4], p_label_num[4], p_label_scale[5], p_label_num[5],
@@ -291,11 +281,9 @@ def train(g, lr, fold_num, epoch_num, alpha_list, device, path):
                 # store performance record
                 train_d[fold_flag] = {
                     'aim': train_aim_list, 'cov': train_cov_list, 'acc': train_acc_list, 'loss': train_loss_list
-                    # 'atr': train_atr_list, 'afr': train_afr_list,
                 }
                 val_d[fold_flag] = {
                     'aim': val_aim_list, 'cov': val_cov_list, 'acc': val_acc_list, 'loss': val_loss_list
-                    # 'atr': val_atr_list, 'afr': val_afr_list,
                 }
                 # store predict matrix
                 np.save(path + str(fold) + '_' + str(fold_flag) + '_' + 'loc_logits', logits.clone().detach().float().cpu().numpy())
@@ -348,6 +336,7 @@ def train(g, lr, fold_num, epoch_num, alpha_list, device, path):
                 with open(path + '/log.tsv', 'a+') as f:
                     writer = csv.writer(f, delimiter='\t')
                     if log_write_flag:
+                        # round num, fold num, train or validation, protein index, true label, pred label
                         writer.writerow(['round', 'fold', 'flag-t0v1', 'index', 'true label', 'predict label'])
                         writer.writerows(row_info)
                         log_write_flag = False
@@ -363,6 +352,7 @@ def train(g, lr, fold_num, epoch_num, alpha_list, device, path):
             'train': train_dict,
             'validation': val_dict
         }
+        # store fig data
         with open(path + 'fig_data' + '_' + str(fold) + '.json', 'w') as f:
             json.dump(fig_data, f)
         fold = fold + 1

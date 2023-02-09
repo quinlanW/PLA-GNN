@@ -31,16 +31,14 @@ with open('../data/log/statistics.txt', 'a') as f:
         diff_matrix = pcc_interverion - pcc_normal  # difference matrix
 
         # thresholds
-        # thrs = [2.00, 2.25, 2.50, 2.75, 3.00]
-        # thrs = [2.75, 2.85, 2.95]
         thrs = [val[2]]
         diff_matrix = diff_matrix.toarray()
-        diff_std = np.std(diff_matrix)
-        diff_mean = np.mean(diff_matrix)
+        diff_std = np.std(diff_matrix)  # standard deviation
+        diff_mean = np.mean(diff_matrix)  # mean value
         for thr in thrs:
             ppi_intervention = copy.deepcopy(ppi_net).todense()
-            l_threshold = diff_mean - thr * diff_std
-            r_threshold = diff_mean + thr * diff_std
+            l_threshold = diff_mean - thr * diff_std  # Calculating the left-hand threshold
+            r_threshold = diff_mean + thr * diff_std  # Calculating the right-hand threshold
 
             # modify topology
             l_num = (diff_matrix < l_threshold).astype(int).sum()  # Less than the left-hand threshold
@@ -112,6 +110,7 @@ with open('../data/log/statistics.txt', 'a') as f:
             rmv_index = np.where(rmv)
             rmv_index = list(zip(rmv_index[0], rmv_index[1]))
 
+            # Adding records to the edge in the network
             add_count = {
                 'both': 0,
                 'single': 0,
@@ -138,6 +137,7 @@ with open('../data/log/statistics.txt', 'a') as f:
                 else:
                     add_count['none'] += 1
 
+            # Removal records to the edge in the network
             rmv_count = {
                 'both': 0,
                 'single': 0,
@@ -181,6 +181,7 @@ with open('../data/log/statistics.txt', 'a') as f:
                 "\tInteractions happen across different subcellular organelles: " + str(rmv_count['diff_rmv']) + '\n'
             )
 
+            # Subcellular localization records
             nor_subcellular_count = {
                 'same': 0,
                 'diff': 0,

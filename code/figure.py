@@ -1,14 +1,8 @@
 import numpy as np
 import json
-import pandas as pd
-import csv
-import seaborn as sns
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 import glob
 from tqdm import tqdm
-from matplotlib import ticker
-from collections import Counter
 from scipy.spatial import distance
 from scipy.sparse import coo_matrix, load_npz
 
@@ -194,10 +188,7 @@ def fig_alpha():
     normal = normal_loc / all_label_num
     normal = normal.tolist()[0]
 
-    # # print(d)
-    # # print(d_data)
     plt.rc('font', family='Times New Roman')
-
     plt.figure(figsize=(9, 5))
     plt.title('Control')
     d_name = ['Cell cortex', 'Cytosol', 'Actin cytoskeleton', 'Golgi apparatus',
@@ -242,6 +233,7 @@ def fig_alpha():
             # plt.show()
             plt.savefig('../data/' + dt + 'α=' + flag + '.png', dpi=1200, bbox_inches='tight')
             plt.close()
+
 
 if __name__ == '__main__':
     save_diff()

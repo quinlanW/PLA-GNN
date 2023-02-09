@@ -28,6 +28,7 @@ def scaling(logit_mat):
 
     return mat
 
+
 def mat_merge(file_path="../data/log"):
     states = ['normal', 'perturbation']
     for paths in glob.glob(file_path+'/GSE*'):
@@ -79,8 +80,8 @@ def misloc_protein_record(normal_mat, inter_mat, data, threshold=100):
     normal = scaling(normal_mat)
     inter = scaling(inter_mat)
     diff_matrix = (inter - normal) / normal
-    diff_indices = diff_matrix.reshape(-1).argsort().tolist()  # 从小到大
-    diff_indices.reverse()  # 从大到小
+    diff_indices = diff_matrix.reshape(-1).argsort().tolist()  # From small to large
+    diff_indices.reverse()  # From large to small
 
     with open('../data/support_materials/cellular_component.txt') as f:
         loc_list = f.read().split()
@@ -89,7 +90,7 @@ def misloc_protein_record(normal_mat, inter_mat, data, threshold=100):
 
     loc_mat = load_npz('../data/generate_materials/loc_matrix.npz').toarray()
 
-    # ### labeled
+    # labeled
     # with open('../data/res/' + data + '/loc_change_record(labeled).csv', 'a') as f:
     #     writer = csv.writer(f, delimiter=',')
     #     writer.writerow(["Protein", "Score", "Altered localization", "Original localization"])
@@ -138,14 +139,14 @@ def misloc_protein_record(normal_mat, inter_mat, data, threshold=100):
     #     json.dump(res_labeled, f)
 
 
-    ### all data
+    # all data
     res_alldata = {}
     rank = 1
     with open('../data/res/' + data + '/loc_change_record.csv', 'a') as f:
         writer = csv.writer(f, delimiter=',')
         writer.writerow(["Protein", "Score", "Altered localization", "Normal score", "Perturbation score"])
         for indice in tqdm(diff_indices):
-            row, col = indice // len(loc_list), indice % len(loc_list)
+            row, col = indice // len(loc_list), indice % len(loc_list)  # get row and col to find protein
             if diff_matrix[row][col] != -1.0:
                 location = loc_map[loc_list[col]]
                 score = diff_matrix[row][col]
@@ -175,7 +176,7 @@ def misloc_protein_record(normal_mat, inter_mat, data, threshold=100):
 
 
 if __name__ == "__main__":
-    # mat_merge()
+    mat_merge()
     for data in ['GSE27182', 'GSE30931', 'GSE74572']:
         loc_normal = np.load('../data/res/' + data + '/normal_logits.npy')
         loc_inter = np.load('../data/res/' + data + '/perturbation_logits.npy')

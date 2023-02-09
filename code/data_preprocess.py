@@ -33,15 +33,13 @@ def extract_interaction_data(data_file):
 
     with open(data_file) as f:
         next(f)
-        biogrid_data = f.readlines()
+        biogrid_data = f.readlines()  # read file
 
     for line in tqdm(biogrid_data, desc='Extracting interaction information'):  # for line in biogrid_data:
         line = line.split('\t')
-        # print(line)
-        # print(len(line))
         if '0915' in line[11] or '0407' in line[11] or '0403' in line[11]:  # select interactionType
-            id_1 = line[2].split('uniprot')
-            id_2 = line[3].split('uniprot')
+            id_1 = line[2].split('uniprot')  # get uniprot AC
+            id_2 = line[3].split('uniprot')  # get uniprot AC
             if len(id_1) == 1 or len(id_2) == 1:
                 continue
             uid_1, uid_2 = [], []
@@ -55,8 +53,10 @@ def extract_interaction_data(data_file):
                 for i2 in uid_2:
                     if i1 == i2:
                         continue
+                    # add nodes
                     uniprot_id_list.add(i1)
                     uniprot_id_list.add(i2)
+                    # add edges
                     interaction_list.add((i1, i2))
                     interaction_list.add((i2, i1))
 
@@ -136,7 +136,7 @@ def construct_gcn_matrix(data, sample_list, protein_list):
         gcn - Protein co-expression coefficient matrix
         expr_gcn - Protein expression matrix
     """
-    expr_set = pd.read_csv(data)
+    expr_set = pd.read_csv(data)  # read expression data
     extract_list = ['uniprot_id']
     extract_list.extend(sample_list)
     expr_data = pd.DataFrame(expr_set[extract_list]).sort_values('uniprot_id')
@@ -163,10 +163,10 @@ def construct_gcn_matrix(data, sample_list, protein_list):
             expr_gcn.loc[item] = expr_data.loc[item]
 
     expr_gcn = expr_gcn.to_numpy()
-    expr_pcc = np.corrcoef(expr_gcn)
-    np.fill_diagonal(expr_pcc, 0)
+    expr_pcc = np.corrcoef(expr_gcn)  # pearson correlation coefficient
+    np.fill_diagonal(expr_pcc, 0)  # fill diagonal
     pcc_nan = np.isnan(expr_pcc)
-    expr_pcc[pcc_nan] = 0
+    expr_pcc[pcc_nan] = 0  # set nan as 0
     gcn = coo_matrix(expr_pcc)
 
     return gcn, expr_gcn
@@ -182,13 +182,16 @@ def edge_clustering_coefficients(ppi_net, epsilon=0):
         ecc network (coo matrix)
     """
     ppi = ppi_net.tocsr()
+    # record ecc data
     ecc_row = []
     ecc_col = []
     ecc_data = []
+    # construct ecc matrix
     for i in tqdm(range(ppi.shape[0]), desc='construct ecc matrix'):
         i_data = ppi[i].toarray()
-        neighbors = ppi[i].indices
-        degree_i = ppi[i].data.sum()
+        neighbors = ppi[i].indices  # node neighbors
+        degree_i = ppi[i].data.sum()  # node degree
+        # count triangles, calculate ecc value
         for j in neighbors[neighbors > i]:
             j_data = ppi[j].toarray()
             triangles_num = np.logical_and(i_data, j_data).sum()
@@ -198,14 +201,14 @@ def edge_clustering_coefficients(ppi_net, epsilon=0):
                 value = epsilon
             else:
                 value = triangles_num / possibly_triangles_num
-
+            # add data
             ecc_row.append(i)
             ecc_col.append(j)
             ecc_data.append(value)
             ecc_row.append(j)
             ecc_col.append(i)
             ecc_data.append(value)
-
+    # construct matrix
     ecc = coo_matrix((ecc_data, (ecc_row, ecc_col)), shape=ppi.shape)
 
     return ecc
@@ -220,34 +223,30 @@ def modify_network_topology(ppi_net, pcc_nor, pcc_inter, thr):
     :param pcc_inter: drug intervention pcc network (coo matrix)
     :param thr: threshold
     :return:
-        ppi_intervention
+        ppi_intervention (coo matrix)
     """
     with tqdm(total=5, desc='modify protein interaction network') as mod_bar:
-        # print(ppi_net.getnnz())
         ppi_net = ppi_net.tocsr()
         pcc_normal = pcc_nor.tocsr()
         pcc_interverion = pcc_inter.tocsr()
         mod_bar.update()
         diff_matrix = pcc_interverion - pcc_normal  # difference matrix
-
         # diff_mat = diff_matrix.tocoo()
         # scipy.sparse.save_npz('../diff', diff_mat)
-
         mod_bar.update()
         ppi_intervention = copy.deepcopy(ppi_net).todense()
         mod_bar.update()
 
         # compute thresholds
         diff_matrix = diff_matrix.toarray()
-        diff_std = np.std(diff_matrix)
-        diff_mean = np.mean(diff_matrix)
+        diff_std = np.std(diff_matrix)  # standard deviation
+        diff_mean = np.mean(diff_matrix)  # mean value
         l_threshold = diff_mean - thr * diff_std
         r_threshold = diff_mean + thr * diff_std
         mod_bar.update()
         # modify topology
         res1 = np.logical_and(diff_matrix < l_threshold, ppi_intervention == 1).A
         res2 = np.logical_and(diff_matrix > r_threshold, ppi_intervention == 0).A
-
         ppi_intervention[res1] = 0
         ppi_intervention[res2] = 1
 
@@ -256,6 +255,7 @@ def modify_network_topology(ppi_net, pcc_nor, pcc_inter, thr):
     mod_bar.close()
 
     return ppi_intervention
+
 
 def construct_matrix_of_normal_and_intervention_cond(data):
     """
@@ -266,7 +266,7 @@ def construct_matrix_of_normal_and_intervention_cond(data):
     """
     normal_path = '../data/generate_materials/'
     protein_list_path = normal_path + 'protein_ppi.json'
-
+    # If the file does not exist, generate the corresponding file
     if not os.path.exists(normal_path + 'PPI_normal.npz'):
         ppi_normal, protein_list = construct_normal_ppi()
         with tqdm(total=2, desc='PPI normal & protein files store') as s_bar:
@@ -276,6 +276,7 @@ def construct_matrix_of_normal_and_intervention_cond(data):
                 with open(protein_list_path, 'w') as f:
                     json.dump(protein_list, f)
                 s_bar.update()
+    # If the file exist, load file
     else:
         with tqdm(total=2, desc='PPI normal & protein files load') as s_bar:
             ppi_normal = sparse.load_npz(normal_path + 'PPI_normal.npz')
@@ -283,19 +284,19 @@ def construct_matrix_of_normal_and_intervention_cond(data):
             with open(protein_list_path) as f:
                 protein_list = json.load(f)
             s_bar.update()
-
+    # If the file does not exist, generate the corresponding file
     if not os.path.exists(normal_path + 'ECC_normal.npz'):
         ecc_normal = edge_clustering_coefficients(ppi_net=ppi_normal)
         with tqdm(total=1, desc='ECC normal file store') as s_bar:
             sparse.save_npz(normal_path + 'ECC_normal', ecc_normal)
             s_bar.update()
-
+    # Generate file in the drug perturbation state
     for sample_data in data.values():
         series = sample_data[1].split('/')[-1].split('_')[0]
         inter_path = sample_data[4]  # '../data/generate_materials/' + series + '_data/'
         if not os.path.exists(inter_path):
             os.makedirs(inter_path)
-
+        # generate protein co-expression matrix & protein expression matrix in the control state
         gcn_normal, expr_normal = construct_gcn_matrix(sample_data[1], sample_data[2]['normal'], protein_list)
         with tqdm(total=2, desc=series + ' GCN normal & expr files store') as s_bar:
             if not os.path.exists(inter_path + 'GCN_normal.npz'):
@@ -304,7 +305,7 @@ def construct_matrix_of_normal_and_intervention_cond(data):
             if not os.path.exists(inter_path + 'expr_normal.npy'):
                 np.save(inter_path + 'expr_normal', expr_normal)
                 s_bar.update()
-
+        # generate protein co-expression matrix & protein expression matrix in the drug perturbation state
         if not os.path.exists(inter_path + 'GCN_inter.npz'):
             gcn_inter, expr_inter = construct_gcn_matrix(sample_data[1], sample_data[2]['intervention'], protein_list)
             with tqdm(total=2, desc=series + ' GCN inter & expr files store') as s_bar:
@@ -317,12 +318,12 @@ def construct_matrix_of_normal_and_intervention_cond(data):
             with tqdm(total=1, desc=series + ' GCN inter file load') as s_bar:
                 gcn_inter = sparse.load_npz(inter_path + 'GCN_inter.npz')
                 s_bar.update()
-
+        # modify ppi topology
         ppi_inter = modify_network_topology(ppi_net=ppi_normal, pcc_nor=gcn_normal, pcc_inter=gcn_inter, thr=sample_data[3])
         if not os.path.exists(inter_path + 'PPI_inter.npz'):
-            sparse.save_npz(inter_path + 'PPI_inter', ppi_inter)
+            sparse.save_npz(inter_path + 'PPI_inter', ppi_inter)  # save ppi after modify topology
             print(series + ' PPI_inter saved')
-
+        # calculate ecc from topology adjusted network
         ecc_inter = edge_clustering_coefficients(ppi_net=ppi_inter)
         if not os.path.exists(inter_path + 'ECC_inter.npz'):
             sparse.save_npz(inter_path + 'ECC_inter', ecc_inter)
@@ -332,6 +333,11 @@ def construct_matrix_of_normal_and_intervention_cond(data):
 def judge_gene_onthology_line(line, go_list):
     """
     Judgment function
+    The evidence codes: IDA (Inferred from Direct Assay),
+                        IEA (Inferred from Electronic Annotation),
+                        IPI (Inferred from Physical Interaction) and
+                        HDA (Inferred from High Throughput Direct Assay)
+    were recognized as reliable evidences of the GO annotations.
 
     :param line:
     :param go_list:
@@ -353,9 +359,9 @@ def extract_localization_data(uniprot_sprot_data='../data/support_materials/unip
     """
     with tqdm(total=3, desc='cellular component data reading') as loc_bar:
         with gzip.open(uniprot_sprot_data) as f:
-            data = f.read().decode()
+            data = f.read().decode()  # read file
         entry_list = data.split('//\n')[0: -1]  # split each protein data
-        loc_dict = {}  # protein and corresponding CC
+        loc_dict = {}  # store protein and corresponding CC
         loc_bar.update()
 
         with open('../data/support_materials/cellular_component.txt') as f:
@@ -363,10 +369,11 @@ def extract_localization_data(uniprot_sprot_data='../data/support_materials/unip
         loc_bar.update()
 
         with open('../data/generate_materials/protein_ppi.json') as f:
-            uni_list = json.load(f)
+            uni_list = json.load(f)  # protein list in PPI network
         loc_bar.update()
     loc_bar.close()
 
+    # extracting cellular component data
     for entry in tqdm(entry_list, desc='cellular component data extracting'):
         AC, CC_list = None, []
         lines = entry.split('\n')
@@ -380,7 +387,7 @@ def extract_localization_data(uniprot_sprot_data='../data/support_materials/unip
         if AC in uni_list and CC_list:
             loc_dict[AC] = CC_list
 
-    label_list = []
+    label_list = []  # store protein and localization GO
     for item in uni_list:
         if item in loc_dict.keys():
             loc = loc_dict[item]
@@ -406,18 +413,19 @@ def construct_protein_loc_matrix(label_list):
 
     ncol = len(loc_list)
     nrow = len(label_list)
-
+    # store loc data
     loc_row = []
     loc_col = []
     loc_data = []
     protein_list, loc = zip(*label_list)
-
+    # construct loc matrix
     for protein, localizations in tqdm(label_list, desc='construct loc matrix'):
         row = protein_list.index(protein)
         if localizations:
             for localization in localizations:
                 col = loc_list.index(localization)
                 data = 1.
+                # add data
                 loc_row.append(row)
                 loc_col.append(col)
                 loc_data.append(data)
@@ -437,7 +445,8 @@ def construct_loc_matrix():
     label_with_loc = extract_data_with_position(label_list)
 
     sparse.save_npz('../data/generate_materials/loc_matrix', loc_matrix)
-    label_with_loc_path = '../data/generate_materials/label_with_loc_list.json'
+    label_with_loc_path = '../data/generate_materials/label_with_loc_list.json'  # store protein index(with localization)
+    # store files
     with open(label_with_loc_path, 'w') as f:
         json.dump(label_with_loc, f)
     label_path = '../data/generate_materials/label_list.json'
@@ -465,7 +474,7 @@ def extract_data_with_position(label_list):
 
 def pca(mat, components):
     """
-    PCA
+    Principal component analysis
 
     :param mat: matrix
     :param components: components
