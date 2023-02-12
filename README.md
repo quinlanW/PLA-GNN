@@ -119,12 +119,16 @@ In this work, we used PLA-GNN (**P**rotein **L**ocalization **A**lterations by *
 
 ### data
 
++ PPI.7z
+
+    > This file is an additional list of PPIs provided. The zip contains four files, separately for the control state, the TSA intervention, the Bortezomib intervention and the Tacrolimus intervention PPI files.
+
 #### support_materials
 
 > This folder stores project-dependent data files. The files in this folder need to be downloaded and placed in the correct path by yourself before the program running. A more detailed description of the file download will be presented in [Section 3](#3).
 >
 > | File                                            | Description                                                  |
-> | ----------------------------------------------- | ------------------------------------------------------------ |
+> | ----------------------------------------------- | :----------------------------------------------------------- |
 > | BIOGRID-ORGANISM-Homo_sapiens-4.4.203.mitab.txt | Protein-protein interaction data downloaded from [BioGRID](https://downloads.thebiogrid.org/BioGRID/Release-Archive/). |
 > | GSE30931_series_matrix.txt                      | Proteasome inhibition blocks estrogen-dependent gene transcription by decreasing histone H2B monoubiquitination in human breast cancer cells. |
 > | GSE27182_series_matrix.txt                      | Expression data in HK-2 cells following exposure to Fk.      |
