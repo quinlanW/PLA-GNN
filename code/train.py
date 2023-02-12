@@ -230,10 +230,10 @@ def train(g, lr, fold_num, epoch_num, alpha_list, device, path):
                         time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
                         print('TIME: {}, In epoch {} / fold {} / round {}, learning rate: {:.10f}, alpha: {:.2f}'
                               .format(time, e, fold_flag, fold, lr, alpha))
-                        print('tra -- aim: {:.3f}, cov: {:.3f}, acc: {:.3f}, atr: {:.3f}, afr: {:.3f}, loss: {:.8f}'
-                              .format(train_aim, train_cov, train_acc, train_atr, train_afr, train_loss))
-                        print('val -- aim: {:.3f}, cov: {:.3f}, acc: {:.3f}, atr: {:.3f}, afr: {:.3f}, loss: {:.8f}'
-                              .format(val_aim, val_cov, val_acc, val_atr, val_afr, val_loss))
+                        print('tra -- aim: {:.3f}, cov: {:.3f}, acc: {:.3f}, loss: {:.8f}'
+                              .format(train_aim, train_cov, train_acc, train_loss))
+                        print('val -- aim: {:.3f}, cov: {:.3f}, acc: {:.3f}, loss: {:.8f}'
+                              .format(val_aim, val_cov, val_acc, val_loss))
                         p_pred = pred.cpu().detach().numpy().astype(int)  # pred protein loc
                         p_pred_num = p_pred.sum(0)  # sum for each loc
                         p_pred_scale = p_pred_num / len(p_pred) * 100
