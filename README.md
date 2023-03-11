@@ -1,6 +1,6 @@
 # PLA-GNN
 
-> PLA-GNN: Computational inference of protein subcellular location alterations under drug treatments with deep graph neural networks
+> [PLA-GNN: Computational inference of protein subcellular location alterations under drug treatments with deep graph neural networks](https://www.sciencedirect.com/science/article/pii/S0010482523002408)
 
 In this work, we used PLA-GNN (**P**rotein **L**ocalization **A**lterations by **G**raph **N**eural **N**etwork) to identify alterations of  protein localizations in the drug perturbation state. We took the case of studies on three drugs, **tacrolimus**, **bortezomib** and **trichostain** **A (TSA)** as instances for this study.
 
@@ -219,3 +219,6 @@ In this work, we used PLA-GNN (**P**rotein **L**ocalization **A**lterations by *
 
 ___
 
+## 6.Citation
+
+[1] Ren-Hua Wang, Tao Luo, Han-Lin Zhang, Pu-Feng Du, [PLA-GNN: Computational inference of protein subcellular location alterations under drug treatments with deep graph neural networks](https://www.sciencedirect.com/science/article/pii/S0010482523002408), Computers in Biology and Medicine
